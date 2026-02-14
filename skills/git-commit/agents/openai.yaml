@@ -1,3 +1,0 @@
-display_name: Git Commit
-short_description: Create git commits consistently
-default_prompt: Make a git commit for the current changes.
