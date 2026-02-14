@@ -31,13 +31,6 @@ Feature List
 - Output
   - Confirmation summary and proof-of-submission
 
-Non-Goals (Phase 1)
-- Tenant SMS interface or onboarding flow
-- Credential storage policy or long-term retention
-- Attachments (photos/videos)
-- Property manager dashboard or portfolio analytics
-- Vendor dispatch or work order routing
-- Payments or billing
 
 Success Criteria
 - Agent can submit complete tickets on multiple real portals via CLI
@@ -51,9 +44,3 @@ Risks and Mitigations
   - Fast manual handoff path
 - Portal DOM changes
   - Robust selectors and fallback flows
-
-Phase 2 Direction (Future Expansion)
-- Tenant-facing SMS interface (e.g., Tully)
-- Tenant onboarding with portal URL + credential setup
-- Property-manager suite for routing and verification
-- Handyman workflow coordination and marketplace integrations
