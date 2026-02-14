@@ -9,6 +9,7 @@ Phase 2
 - Tenant SMS channel integration (e.g., Tully)
 - Tenant identity verification and onboarding flow
 - Portal URL intake and credential setup flow
+- Switch plaintext credentials store to encrypted JSON blob (AES-GCM) using CREDENTIALS_MASTER_KEY
 - Credential storage policy and security requirements
 - OTP timeout, retry, and fallback behavior
 - Attachments support (photos/videos)
