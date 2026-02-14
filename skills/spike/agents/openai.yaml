@@ -1,0 +1,3 @@
+display_name: Spike Orchestrator
+short_description: Linear SDLC workflow for one ticket at a time
+default_prompt: Run the spike() workflow for the next ticket in todo.md.
