@@ -1,0 +1,18 @@
+Backlog
+
+Post-MVP (Phase 1.5)
+- Define failure-state UX and recovery messaging
+- Logging and traceability plan for proof-of-submission (what is stored, retention)
+- Human-in-the-loop operational process (SLA, staffing, escalation policy)
+
+Phase 2
+- Tenant SMS channel integration (e.g., Tully)
+- Tenant identity verification and onboarding flow
+- Portal URL intake and credential setup flow
+- Credential storage policy and security requirements
+- OTP timeout, retry, and fallback behavior
+- Attachments support (photos/videos)
+- Compliance/privacy policy (PII handling, consent)
+- Expanded success criteria (error rate, user satisfaction)
+- Multilingual support
+- Handyman workflow integration and marketplace coordination

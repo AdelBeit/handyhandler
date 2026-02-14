@@ -1,0 +1,3 @@
+Handyhandler serves 42.5 million U.S. renter households in a $134.2B property management market, using a web agent that logs into any rental portal to file accurate maintenance requests and eliminate tenant–manager back-and-forth.
+The MVP is simple: tenants text the agent, it authenticates via their phone number and OTP codes after registration, then submits complete tickets so tenants get a better UX and managers get fewer incomplete requests.
+Next, we expand the agent into a coordinator for handyman workflows, routing jobs to in-house teams or existing marketplaces and evolving into a handyman marketplace over time.
