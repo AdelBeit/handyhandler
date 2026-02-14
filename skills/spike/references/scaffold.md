@@ -47,9 +47,8 @@
 ### spike() Orchestrator Skill
 Responsibilities:
 - Pick exactly one ticket from `todo.md`.
-- Move ticket to `inprogress.md` and commit the change.
 - Trigger MainAgent for that ticket.
-- Stop after CodeStandardsReviewer finishes.
+- Stop after triggering MainAgent.
 
 Handoff:
 - spike() → MainAgent
@@ -134,8 +133,6 @@ CodeStandardsReviewer validation:
 ```
 spike():
   ticket = pick_first(todo.md)
-  move_ticket(todo.md, inprogress.md)
-  git_commit("chore(spike): start <ticket-id>")
   call MainAgent(ticket)
 
 MainAgent(ticket):
