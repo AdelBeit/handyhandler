@@ -1,13 +1,6 @@
-## Summary
+# Summary
 - 
 
-## Changes
-- 
-
-## Testing
-- [ ] Not run (explain why)
-- [ ] Manual
-- [ ] Automated
-
-## Notes
-- 
+# Testing
+- Where to look:
+- What to verify:
