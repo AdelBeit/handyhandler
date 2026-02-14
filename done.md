@@ -1,3 +1,3 @@
 # DONE
 
-- [x] <ticket-id>: <short title>
+- [x] TICKET-001: Add decoupled automation interface and TinyFish runner
