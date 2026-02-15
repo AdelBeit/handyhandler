@@ -62,13 +62,24 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     const normalized = stripBotMention(rawContent, client.user).toLowerCase();
     const alreadyRunning = sessions.has(message.author.id);
     const matchesTrigger = commandRegexes.some((regex) => regex.test(normalized));
+    const isAttachCommand = /^attach$/i.test(normalized);
     const isDm = message.channel.type === ChannelType.DM;
     const botMentioned = client.user ? message.mentions.has(client.user.id) : false;
-    if (!matchesTrigger && !alreadyRunning) {
+    if (!matchesTrigger && !alreadyRunning && !isAttachCommand) {
       if (botMentioned && !normalized) {
         return messenger.sendMessage(message.channelId, 'yes?');
       }
       return;
+    }
+    if (!alreadyRunning && isAttachCommand && !isDm) {
+      if (!botMentioned && !channelId) return;
+      const session = getSession(message.author.id);
+      session.stage = 'attachments';
+      session.channelId = message.channelId;
+      return messenger.sendMessage(
+        message.channelId,
+        'Send any photos/documents to attach, or type `skip` to continue without attachments.'
+      );
     }
     if (alreadyRunning && matchesTrigger) {
       const session = getSession(message.author.id);
