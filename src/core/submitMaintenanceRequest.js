@@ -16,6 +16,10 @@ function buildGoal(input) {
   if (input.issue && input.issue.category) {
     parts.push(`Category: ${input.issue.category}`);
   }
+  parts.push(
+    'After submitting, verify success by locating a confirmation ID or the new request in the requests list.'
+  );
+  parts.push('Report the confirmation ID/status or the exact list entry details as proof of submission.');
   return parts.join(' ');
 }
 
