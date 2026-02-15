@@ -9,4 +9,4 @@
 - **TICKET-009 (Discord credential reuse)** – Todo: encrypt reuse with Discord user ID + PIN.
 - **TICKET-012 (Discord DM for sensitive intake)** – Done: https://github.com/AdelBeit/handyhandler/pull/8
 - **TICKET-011 (Discord restart flow)** – Done: https://github.com/AdelBeit/handyhandler/pull/9
-- **TICKET-013 (Confirmation image)** – In Review: https://github.com/AdelBeit/handyhandler/pull/10
+- **TICKET-013 (User attachments)** – In Review: accept user images/docs, store in `tmp`, delete after submission. https://github.com/AdelBeit/handyhandler/pull/10
