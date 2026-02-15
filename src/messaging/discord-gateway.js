@@ -403,11 +403,11 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     if (data.ACTION) data.action = data.ACTION;
     if (data.REASON) data.reason = data.REASON;
     if (data.SUGGESTED_PROMPT) data.prompt = data.SUGGESTED_PROMPT;
-    if (data.MISSING) {
+    if (data.FIELDS) {
       try {
-        data.missing = JSON.parse(data.MISSING);
+        data.fields = JSON.parse(data.FIELDS);
       } catch {
-        data.missing = data.MISSING;
+        data.fields = data.FIELDS;
       }
     }
     return data;
@@ -434,9 +434,9 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
         return;
       }
 
-      if (outcome.action === 'NEEDS_INFO') {
+      if (outcome.action === 'USER_ACTION_REQUIRED' || outcome.action === 'NEEDS_INFO') {
         session.stage = 'remediation';
-        session.data.missing = outcome.missing || outcome.reason;
+        session.data.missing = outcome.fields || outcome.reason;
         messenger.sendMessage(channelId, outcomePrompt(outcome));
         return;
       }

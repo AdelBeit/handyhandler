@@ -24,9 +24,9 @@ function buildGoal(input) {
     'If submission fails, respond with a structured block exactly like:\n' +
       'STATUS: FAILED\n' +
       'REASON: <short reason>\n' +
-      'ACTION: <NEEDS_INFO | RETRY_LATER | BLOCKED | UNKNOWN>\n' +
+      'ACTION: <USER_ACTION_REQUIRED | RETRY_LATER | BLOCKED | UNKNOWN>\n' +
       'SUGGESTED_PROMPT: <message for the user>\n' +
-      'MISSING: [<optional list>]\n' +
+      'FIELDS: [<optional list of fields or corrections>]\n' +
       'If submission succeeds, respond with: STATUS: SUCCESS'
   );
   return parts.join(' ');
