@@ -3,4 +3,4 @@
 - **TICKET-004 (login smoke test)** – Done: `scripts/login-smoke-test.js` validated the login flow and was merged.
 - **TICKET-005 (full maintenance smoke test)** – Done: `scripts/maintenance-smoke-test.js` validated the full maintenance flow.
 - **TICKET-010 (Discord messaging channel)** – Done: https://github.com/AdelBeit/handyhandler/pull/7
-- **TICKET-012 (Discord DM for sensitive intake)** – In Progress: move "new request" flows into a DM before collecting portal credentials.
+- **TICKET-012 (Discord DM for sensitive intake)** – In Review: https://github.com/AdelBeit/handyhandler/pull/8
