@@ -30,13 +30,19 @@ if (!accountSid || !authToken || !fromNumber) {
 
 const toNumber = process.argv[2];
 const body = process.argv[3] || 'Test SMS from Handyhandler.';
+const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID || env.TWILIO_MESSAGING_SERVICE_SID;
 
 if (!toNumber) {
   console.error('Usage: node scripts/send-test-sms.js <recipient> [message]');
   process.exit(1);
 }
 
-const messenger = createTwilioMessenger({ accountSid, authToken, from: fromNumber });
+const messenger = createTwilioMessenger({
+  accountSid,
+  authToken,
+  from: fromNumber,
+  messagingServiceSid,
+});
 
 messenger
   .sendSms(toNumber, body)

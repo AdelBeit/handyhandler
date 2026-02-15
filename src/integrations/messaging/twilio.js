@@ -1,9 +1,12 @@
 const https = require('https');
 const querystring = require('querystring');
 
-function createTwilioMessenger({ accountSid, authToken, from }) {
-  if (!accountSid || !authToken || !from) {
-    throw new Error('Twilio accountSid, authToken, and from number are required.');
+function createTwilioMessenger({ accountSid, authToken, from, messagingServiceSid }) {
+  if (!accountSid || !authToken) {
+    throw new Error('Twilio accountSid and authToken are required.');
+  }
+  if (!from && !messagingServiceSid) {
+    throw new Error('Either Twilio from number or messagingServiceSid is required.');
   }
 
   const authHeader = `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`;
@@ -14,11 +17,13 @@ function createTwilioMessenger({ accountSid, authToken, from }) {
       return Promise.reject(new Error('Recipient number and message body are required.'));
     }
 
-    const payload = querystring.stringify({
+    const params = {
       To: to,
-      From: from,
       Body: body,
-    });
+    };
+    if (from) params.From = from;
+    if (messagingServiceSid) params.MessagingServiceSid = messagingServiceSid;
+    const payload = querystring.stringify(params);
 
     const options = {
       hostname: 'api.twilio.com',
