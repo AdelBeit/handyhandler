@@ -69,6 +69,11 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       }
       return;
     }
+    if (alreadyRunning && matchesTrigger) {
+      const session = getSession(message.author.id);
+      requestRestartConfirmation(message, session);
+      return;
+    }
     if (!alreadyRunning && matchesTrigger && !isDm) {
       if (!botMentioned && !channelId) return;
       startDmSession(message);
@@ -123,6 +128,22 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       session.channelId = message.channelId;
     }
     const clean = message.content.trim();
+    if (session.pendingRestart) {
+      if (/^start over$/i.test(clean) || /^yes$/i.test(clean)) {
+        session.stage = 'portal';
+        session.data = {};
+        session.pendingRestart = false;
+        return messenger.sendMessage(message.channelId, 'Okay, starting over. Send your portal URL to get started.');
+      }
+      if (/^(continue|keep going|no)$/i.test(clean)) {
+        session.pendingRestart = false;
+        return messenger.sendMessage(message.channelId, promptForStage(session));
+      }
+      return messenger.sendMessage(
+        message.channelId,
+        'Type `start over` to restart or `continue` to keep your current request.'
+      );
+    }
     if (/^cancel$/i.test(clean)) {
       sessions.delete(message.author.id);
       return messenger.sendMessage(message.channelId, 'Session cancelled. Send “new request” to restart.');
@@ -169,6 +190,38 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       default:
         session.stage = 'portal';
         return messenger.sendMessage(message.channelId, 'Send your portal URL to get started.');
+    }
+  }
+
+  function promptForStage(session) {
+    switch (session.stage) {
+      case 'portal':
+        return 'Send your portal URL to get started.';
+      case 'username':
+        return 'What is your portal username?';
+      case 'password':
+        return 'Send the password when you are ready.';
+      case 'issue':
+        return 'Describe the maintenance issue.';
+      case 'confirm':
+        return 'Type `yes` to submit the request or `cancel` to abort.';
+      default:
+        return 'Send your portal URL to get started.';
+    }
+  }
+
+  function requestRestartConfirmation(message, session) {
+    if (!session.channelId && message.channel.type === ChannelType.DM) {
+      session.channelId = message.channelId;
+    }
+    session.pendingRestart = true;
+    const targetChannelId = session.channelId || message.channelId;
+    messenger.sendMessage(
+      targetChannelId,
+      'You already have a request in progress. Type `start over` to restart or `continue` to keep going.'
+    );
+    if (targetChannelId !== message.channelId) {
+      messenger.sendMessage(message.channelId, 'I sent you a DM to continue this request.');
     }
   }
 
