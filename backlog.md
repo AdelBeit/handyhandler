@@ -11,7 +11,7 @@
 - **TICKET-019 (Session persistence)** – Todo: persist sessions to a JSON file so they survive restarts.
 - **TICKET-020 (Request status lookup)** – Todo: allow users to request maintenance status; if no specific request is named, return top 5 open requests and prompt for specific/all/cancelled/resolved filters.
 - **TICKET-021 (Conversation polish)** – Todo: tweak the conversation flow to feel smoother and more natural.
-- **TICKET-022 (Field confirmation & safe options)** – Todo: confirm inferred field values; if user says no, enumerate allowed options and accept only from that list (case/spacing-insensitive), with `cancel` still available.
+- **TICKET-022 (Field confirmation & safe options)** – In Progress: confirm inferred field values; if user says no, enumerate allowed options and accept only from that list (case/spacing-insensitive), with `cancel` still available.
 - **TICKET-009 (Discord credential reuse)** – Todo: encrypt reuse with Discord user ID + PIN.
 - **TICKET-007 (Discord credential capture)** – Todo: portal URL, username, password, consent flow.
 - **TICKET-012 (Discord DM for sensitive intake)** – Done: https://github.com/AdelBeit/handyhandler/pull/8
