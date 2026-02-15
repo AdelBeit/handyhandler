@@ -40,7 +40,7 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
       );
     }
 
-    if (matches(input.text, /^(cancel|abort)$/i)) {
+    if (matches(input.text, /^(cancel|abort|stop|quit|exit)$/i)) {
       await cleanupSessionFiles(session);
       sessionStore.remove(session.userId);
       return messenger.sendMessage(input.channelId, FLOW_MESSAGES.cancelled);
@@ -119,6 +119,9 @@ function matches(text, regex) {
 }
 
 async function handleRemediation(input, session, automationHandler, messenger, sessionStore, root) {
+  if (!session.data.remediation) {
+    session.data.remediation = { state: 'collecting' };
+  }
   const attachments = extractAttachments(input.attachments);
   if (attachments.length) {
     await persistAttachments(session, attachments, root);
@@ -129,6 +132,46 @@ async function handleRemediation(input, session, automationHandler, messenger, s
   }
   if (matches(input.text, /^done$/i)) {
     return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore);
+  }
+  if (matches(input.text, /^(options|list)$/i) && session.data.remediation.options) {
+    const field = session.data.remediation.field || 'this field';
+    const options = session.data.remediation.options;
+    return messenger.sendMessage(input.channelId, FLOW_MESSAGES.remediationOptions(field, options));
+  }
+  if (session.data.remediation.state === 'awaiting_confirmation') {
+    if (matches(input.text, /^yes$/i)) {
+      const { field, proposal } = session.data.remediation;
+      if (field && proposal) {
+        session.data[field] = proposal;
+      }
+      session.data.remediation = null;
+      return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore);
+    }
+    if (matches(input.text, /^no$/i)) {
+      const { field, options } = session.data.remediation;
+      if (options && options.length) {
+        session.data.remediation.state = 'awaiting_option';
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.remediationOptions(field, options));
+      }
+      session.data.remediation = null;
+      return messenger.sendMessage(input.channelId, FLOW_MESSAGES.remediationNoted);
+    }
+    return messenger.sendMessage(input.channelId, FLOW_MESSAGES.remediationConfirmHint);
+  }
+  if (session.data.remediation.state === 'awaiting_option') {
+    const selected = matchOption(input.text, session.data.remediation.options || []);
+    if (selected) {
+      const field = session.data.remediation.field;
+      if (field) {
+        session.data[field] = selected;
+      }
+      session.data.remediation = null;
+      return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore);
+    }
+    return messenger.sendMessage(
+      input.channelId,
+      `${FLOW_MESSAGES.remediationInvalidOption} ${FLOW_MESSAGES.remediationOptionsHint}`
+    );
   }
   session.data.extras = session.data.extras || [];
   session.data.extras.push({ at: new Date().toISOString(), content: input.text });
@@ -268,6 +311,20 @@ function parseStructuredBlock(text) {
       data.fields = data.FIELDS;
     }
   }
+  if (data.PROPOSAL) {
+    try {
+      data.proposal = JSON.parse(data.PROPOSAL);
+    } catch {
+      data.proposal = data.PROPOSAL;
+    }
+  }
+  if (data.OPTIONS) {
+    try {
+      data.options = JSON.parse(data.OPTIONS);
+    } catch {
+      data.options = data.OPTIONS;
+    }
+  }
   return data;
 }
 
@@ -275,6 +332,24 @@ function outcomePrompt(outcome) {
   if (outcome.prompt) return outcome.prompt;
   if (outcome.reason) return outcome.reason;
   return FLOW_MESSAGES.automationFailed;
+}
+
+function normalizeOption(value) {
+  return value
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\\s+/g, ' ')
+    .trim();
+}
+
+function matchOption(input, options) {
+  const normalizedInput = normalizeOption(input || '');
+  if (!normalizedInput) return null;
+  const normalizedMap = new Map();
+  for (const option of options) {
+    normalizedMap.set(normalizeOption(option), option);
+  }
+  return normalizedMap.get(normalizedInput) || null;
 }
 
 async function runAutomation(channelId, session, automationHandler, messenger, sessionStore) {
@@ -298,6 +373,23 @@ async function runAutomation(channelId, session, automationHandler, messenger, s
     if (outcome.action === 'USER_ACTION_REQUIRED' || outcome.action === 'NEEDS_INFO') {
       session.stage = 'remediation';
       session.data.missing = outcome.fields || outcome.reason;
+      const field = Array.isArray(outcome.fields) ? outcome.fields[0] : outcome.fields;
+      const proposal = outcome.proposal && field ? outcome.proposal[field] : null;
+      const options = outcome.options && field ? outcome.options[field] : null;
+      session.data.remediation = {
+        state: proposal ? 'awaiting_confirmation' : options ? 'awaiting_option' : 'collecting',
+        field,
+        proposal,
+        options: Array.isArray(options) ? options : options ? [options] : null,
+      };
+      if (proposal) {
+        messenger.sendMessage(channelId, FLOW_MESSAGES.remediationProposal(field, proposal));
+        return;
+      }
+      if (options && options.length) {
+        messenger.sendMessage(channelId, FLOW_MESSAGES.remediationOptions(field, options));
+        return;
+      }
       messenger.sendMessage(channelId, outcomePrompt(outcome));
       return;
     }

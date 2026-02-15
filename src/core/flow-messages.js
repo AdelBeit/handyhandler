@@ -27,6 +27,13 @@ const FLOW_MESSAGES = {
   remediationPrompt: 'Please provide the extra information requested. Type `done` when finished.',
   remediationNoted: 'Noted. Send more details or type `done` when finished.',
   remediationDone: 'Thanks. Type `yes` to submit the request or `cancel` to abort.',
+  remediationProposal: (field, value) =>
+    `I wasn't given ${field}. I think it should be "${value}". Reply \`yes\` to accept or \`no\` to choose another option.`,
+  remediationOptions: (field, options) =>
+    `Please choose a value for ${field} from: ${options.join(', ')}.`,
+  remediationInvalidOption: 'Please choose one of the provided options.',
+  remediationOptionsHint: 'Reply with one of the listed options or type `options` to see them again.',
+  remediationConfirmHint: 'Reply `yes` to accept or `no` to choose another option.',
   requestSubmitted: 'Request submitted successfully.',
   automationFailed: 'Unable to submit the request. Please try again later.',
   confirmationImageLabel: 'Confirmation image',

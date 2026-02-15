@@ -27,6 +27,8 @@ function buildGoal(input) {
       'ACTION: <USER_ACTION_REQUIRED | RETRY_LATER | BLOCKED | UNKNOWN>\n' +
       'SUGGESTED_PROMPT: <message for the user>\n' +
       'FIELDS: [<optional list of fields or corrections>]\n' +
+      'PROPOSAL: {<field>: <proposed value>}\n' +
+      'OPTIONS: {<field>: [<allowed option 1>, <allowed option 2>]}\n' +
       'If submission succeeds, respond with: STATUS: SUCCESS'
   );
   return parts.join(' ');
