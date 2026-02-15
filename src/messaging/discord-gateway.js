@@ -227,44 +227,12 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       }
       case 'confirm':
         if (/^yes$/i.test(clean)) {
-          automationHandler
-            .run(session.data)
-            .then((result) => {
-              messenger.sendMessage(
-                message.channelId,
-                `Request submitted. Result: ${result.success ? 'success' : 'failure'}.`
-              );
-              if (result.success && result.confirmation) {
-                messenger.sendImage(
-                  message.channelId,
-                  result.confirmation,
-                  'Confirmation image'
-                );
-              }
-            })
-            .catch((err) => {
-              messenger.sendMessage(message.channelId, `Error: ${err.message}`);
-            })
-            .finally(() => {
-              cleanupSessionFiles(session).finally(() => sessionStore.remove(message.author.id));
-            });
-        } else {
-          messenger.sendMessage(message.channelId, 'Type `yes` when you’re ready or `cancel` to stop.');
+          return runAutomation(message.channelId, session);
         }
+        messenger.sendMessage(message.channelId, 'Type `yes` when you’re ready or `cancel` to stop.');
         return;
       case 'remediation':
-        if (/^done$/i.test(clean)) {
-          session.stage = 'confirm';
-          return messenger.sendMessage(
-            message.channelId,
-            'Thanks. Type `yes` to submit the request or `cancel` to abort.'
-          );
-        }
-        sessionStore.recordExtra(session, clean);
-        return messenger.sendMessage(
-          message.channelId,
-          'Noted. Send more details or type `done` when finished.'
-        );
+        return handleRemediation(message, session);
       default:
         session.stage = 'portal';
         return messenger.sendMessage(message.channelId, 'Send your portal URL to get started.');
@@ -377,6 +345,109 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       } catch (err) {
         console.warn(`Failed to cleanup temp dir ${session.tempDir}: ${err.message}`);
       }
+    }
+  }
+
+  async function handleRemediation(message, session) {
+    const attachments = extractAttachments(message);
+    if (attachments.length) {
+      await persistAttachments(session, attachments);
+      return messenger.sendMessage(
+        message.channelId,
+        `Saved ${attachments.length} attachment(s). Send more or type \`done\` to continue.`
+      );
+    }
+    const clean = message.content.trim();
+    if (/^done$/i.test(clean)) {
+      return runAutomation(message.channelId, session);
+    }
+    sessionStore.recordExtra(session, clean);
+    return messenger.sendMessage(
+      message.channelId,
+      'Noted. Send more details or type `done` when finished.'
+    );
+  }
+
+  function parseOutcome(result) {
+    if (!result) return { status: 'FAILED', action: 'UNKNOWN', reason: 'Unknown failure.' };
+
+    const textSources = [];
+    if (result.raw) {
+      if (typeof result.raw.message === 'string') textSources.push(result.raw.message);
+      if (typeof result.raw.resultJson === 'string') textSources.push(result.raw.resultJson);
+      if (result.raw.resultJson && typeof result.raw.resultJson === 'object') {
+        if (typeof result.raw.resultJson.message === 'string') textSources.push(result.raw.resultJson.message);
+        if (typeof result.raw.resultJson.status === 'string') textSources.push(result.raw.resultJson.status);
+      }
+    }
+
+    const combined = textSources.join('\n');
+    const block = parseStructuredBlock(combined);
+    if (block.status) return block;
+
+    return result.success
+      ? { status: 'SUCCESS' }
+      : { status: 'FAILED', action: 'UNKNOWN', reason: 'Submission failed.' };
+  }
+
+  function parseStructuredBlock(text) {
+    if (!text) return {};
+    const lines = text.split(/\r?\n/);
+    const data = {};
+    for (const line of lines) {
+      const match = line.match(/^([A-Z_]+):\s*(.+)$/);
+      if (!match) continue;
+      data[match[1]] = match[2].trim();
+    }
+    if (data.STATUS) data.status = data.STATUS;
+    if (data.ACTION) data.action = data.ACTION;
+    if (data.REASON) data.reason = data.REASON;
+    if (data.SUGGESTED_PROMPT) data.prompt = data.SUGGESTED_PROMPT;
+    if (data.MISSING) {
+      try {
+        data.missing = JSON.parse(data.MISSING);
+      } catch {
+        data.missing = data.MISSING;
+      }
+    }
+    return data;
+  }
+
+  function outcomePrompt(outcome) {
+    if (outcome.prompt) return outcome.prompt;
+    if (outcome.reason) return outcome.reason;
+    return 'Unable to submit the request. Please try again later.';
+  }
+
+  async function runAutomation(channelId, session) {
+    try {
+      const result = await automationHandler.run(session.data);
+      const outcome = parseOutcome(result);
+
+      if (outcome.status === 'SUCCESS' || result.success) {
+        messenger.sendMessage(channelId, 'Request submitted successfully.');
+        if (result.confirmation) {
+          messenger.sendImage(channelId, result.confirmation, 'Confirmation image');
+        }
+        await cleanupSessionFiles(session);
+        sessionStore.remove(session.userId);
+        return;
+      }
+
+      if (outcome.action === 'NEEDS_INFO') {
+        session.stage = 'remediation';
+        session.data.missing = outcome.missing || outcome.reason;
+        messenger.sendMessage(channelId, outcomePrompt(outcome));
+        return;
+      }
+
+      messenger.sendMessage(channelId, outcomePrompt(outcome));
+      await cleanupSessionFiles(session);
+      sessionStore.remove(session.userId);
+    } catch (err) {
+      messenger.sendMessage(channelId, `Error: ${err.message}`);
+      await cleanupSessionFiles(session);
+      sessionStore.remove(session.userId);
     }
   }
 
