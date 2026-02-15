@@ -56,7 +56,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
 
   client.on('messageCreate', (message) => {
     if (message.author.bot) return;
-    if (channelId && message.channelId !== channelId) return;
+    if (channelId && message.channel.type !== ChannelType.DM && message.channelId !== channelId) return;
     const rawContent = message.content.trim();
     const normalized = stripBotMention(rawContent, client.user).toLowerCase();
     const alreadyRunning = sessions.has(message.author.id);
