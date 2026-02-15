@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, ChannelType, Partials } = require('discord.js');
 const { createDiscordMessenger } = require('../integrations/messaging/discord');
 
 const STAGES = ['portal', 'username', 'password', 'issue', 'confirm'];
@@ -38,7 +38,13 @@ function stripBotMention(content, clientUser) {
 function createDiscordGateway({ botToken, channelId, automationHandler }) {
   if (!botToken) throw new Error('DISCORD_BOT_TOKEN is required for the gateway.');
   const client = new Client({
-    intents: [GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.Guilds],
+    intents: [
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.DirectMessages,
+    ],
+    partials: [Partials.Channel],
   });
   const messenger = createDiscordMessenger({ botToken });
   const sessions = new Map();
@@ -63,6 +69,11 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       }
       return;
     }
+    if (!alreadyRunning && matchesTrigger && !isDm) {
+      if (!botMentioned && !channelId) return;
+      startDmSession(message);
+      return;
+    }
     if (!alreadyRunning && !isDm && !botMentioned) return;
     const userId = message.author.id;
     const session = getSession(userId);
@@ -80,7 +91,37 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     return sessions.get(userId);
   }
 
+  async function startDmSession(message) {
+    const userId = message.author.id;
+    const session = getSession(userId);
+    try {
+      const dmChannel = await message.author.createDM();
+      session.channelId = dmChannel.id;
+      session.stage = 'portal';
+      session.data = {};
+      messenger.sendMessage(
+        dmChannel.id,
+        'Thanks—let’s continue in a DM. Send your portal URL to get started.'
+      );
+      if (message.channelId !== dmChannel.id) {
+        messenger.sendMessage(message.channelId, 'I sent you a DM to continue this request.');
+      }
+    } catch (error) {
+      console.warn(`Unable to open DM for user ${userId}: ${error.message}`);
+      messenger.sendMessage(
+        message.channelId,
+        'I could not open a DM. Please send me a direct message to continue.'
+      );
+    }
+  }
+
   function handleSessionMessage(message, session) {
+    if (session.channelId && message.channelId !== session.channelId) {
+      return messenger.sendMessage(message.channelId, 'I sent you a DM to continue this request.');
+    }
+    if (!session.channelId && message.channel.type === ChannelType.DM) {
+      session.channelId = message.channelId;
+    }
     const clean = message.content.trim();
     if (/^cancel$/i.test(clean)) {
       sessions.delete(message.author.id);
