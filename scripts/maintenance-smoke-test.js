@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { getCredentialById } = require('../src/secrets/credentials');
 const { createTinyFishRunner } = require('../src/integrations/tinyfish/runner');
+const { buildGoal } = require('../src/core/submitMaintenanceRequest');
 
 const repoRoot = path.resolve(__dirname, '..');
 const envFile = path.join(repoRoot, '.env');
@@ -60,15 +61,15 @@ if (!portalUrl) {
   process.exit(1);
 }
 
-const goal = [
-  `Log in with username ${credential.username} and password ${credential.password}.`,
-  'Navigate to the maintenance request form, fill in the fields below, and submit the request.',
-  `Summary: ${summary}.`,
-  `Category: ${category}.`,
-  `Urgency: ${urgency}.`,
-  `Details: ${details}.`,
-  'After submission, return to the landing page and report how many active maintenance requests are displayed.',
-].join('\n');
+const baseGoal = buildGoal({
+  issue: {
+    description: summary,
+    location: 'Maintenance landing page',
+    urgency,
+    category,
+  },
+});
+const goal = `${baseGoal}\n\nPlease continue logging into the portal, complete the maintenance request form with the details above, submit it, and then return to the landing page to report how many active maintenance requests are displayed.`;
 
 const runner = createTinyFishRunner({
   apiKey,
