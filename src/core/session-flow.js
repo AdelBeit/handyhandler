@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { FLOW_MESSAGES } = require('./flow-messages');
 
 const STAGES = ['portal', 'username', 'password', 'issue', 'attachments', 'confirm', 'remediation'];
 
@@ -27,7 +28,7 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
         session.stage = 'portal';
         session.data = {};
         session.pendingRestart = false;
-        return messenger.sendMessage(input.channelId, 'Okay, starting over. Send your portal URL to get started.');
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.startOver);
       }
       if (matches(input.text, /^(continue|keep going|no)$/i)) {
         session.pendingRestart = false;
@@ -35,52 +36,43 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
       }
       return messenger.sendMessage(
         input.channelId,
-        'Type `start over` to restart or `continue` to keep your current request.'
+        FLOW_MESSAGES.restartHelp
       );
     }
 
-    if (matches(input.text, /^cancel$/i)) {
+    if (matches(input.text, /^(cancel|abort)$/i)) {
       await cleanupSessionFiles(session);
       sessionStore.remove(session.userId);
-      return messenger.sendMessage(input.channelId, 'Session cancelled. Send “new request” to restart.');
+      return messenger.sendMessage(input.channelId, FLOW_MESSAGES.cancelled);
     }
 
     if (matches(input.text, /^attach$/i)) {
       session.stage = 'attachments';
-      return messenger.sendMessage(
-        input.channelId,
-        'Send any photos/documents to attach, or type `skip` to continue without attachments.'
-      );
+      return messenger.sendMessage(input.channelId, FLOW_MESSAGES.attachmentSendPrompt);
     }
 
     if (matches(input.text, /^more info$/i)) {
       session.stage = 'remediation';
-      return messenger.sendMessage(
-        input.channelId,
-        'Please provide the extra information requested. Type `done` when finished.'
-      );
+      return messenger.sendMessage(input.channelId, FLOW_MESSAGES.remediationPrompt);
     }
 
     switch (session.stage) {
       case 'portal':
         session.data.portalUrl = input.text;
         session.stage = 'username';
-        return messenger.sendMessage(input.channelId, 'Great—what is your portal username?');
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.usernamePrompt);
       case 'username':
         session.data.username = input.text;
         session.stage = 'password';
-        return messenger.sendMessage(input.channelId, 'Now send the password (it will be encrypted).');
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.passwordPrompt);
       case 'password':
         session.data.password = input.text;
         session.stage = 'issue';
-        return messenger.sendMessage(input.channelId, 'Describe the maintenance issue.');
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.issuePrompt);
       case 'issue':
         session.data.issueDescription = input.text;
         session.stage = 'attachments';
-        return messenger.sendMessage(
-          input.channelId,
-          'If you have photos or documents to attach, send them now. Type `skip` to continue without attachments.'
-        );
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.attachmentPrompt);
       case 'attachments': {
         const attachments = extractAttachments(input.attachments);
         if (attachments.length) {
@@ -88,7 +80,7 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
           const summary = attachments.map((item) => item.filename || 'attachment').join(', ');
           return messenger.sendMessage(
             input.channelId,
-            `Saved ${attachments.length} attachment(s): ${summary}. Send more or type \`done\` to continue.`
+            FLOW_MESSAGES.attachmentSaved(attachments.length, summary)
           );
         }
         if (matches(input.text, /^(skip|done)$/i)) {
@@ -97,24 +89,21 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
           session.stage = 'confirm';
           return messenger.sendMessage(
             input.channelId,
-            summary || 'No attachments saved. Type `yes` to submit the request or `cancel` to abort.'
+            summary || FLOW_MESSAGES.attachmentNoneSaved
           );
         }
-        return messenger.sendMessage(
-          input.channelId,
-          'Please attach images/documents, or type `skip` to continue.'
-        );
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.attachmentAwait);
       }
       case 'confirm':
         if (matches(input.text, /^yes$/i)) {
           return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore);
         }
-        return messenger.sendMessage(input.channelId, 'Type `yes` when you’re ready or `cancel` to stop.');
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.confirmReadyPrompt);
       case 'remediation':
         return handleRemediation(input, session, automationHandler, messenger, sessionStore, root);
       default:
         session.stage = 'portal';
-        return messenger.sendMessage(input.channelId, 'Send your portal URL to get started.');
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.portalPrompt);
     }
   }
 
@@ -135,7 +124,7 @@ async function handleRemediation(input, session, automationHandler, messenger, s
     await persistAttachments(session, attachments, root);
     return messenger.sendMessage(
       input.channelId,
-      `Saved ${attachments.length} attachment(s). Send more or type \`done\` to continue.`
+      FLOW_MESSAGES.attachmentSavedRemediation(attachments.length)
     );
   }
   if (matches(input.text, /^done$/i)) {
@@ -143,7 +132,7 @@ async function handleRemediation(input, session, automationHandler, messenger, s
   }
   session.data.extras = session.data.extras || [];
   session.data.extras.push({ at: new Date().toISOString(), content: input.text });
-  return messenger.sendMessage(input.channelId, 'Noted. Send more details or type `done` when finished.');
+  return messenger.sendMessage(input.channelId, FLOW_MESSAGES.remediationNoted);
 }
 
 function extractAttachments(attachments) {
@@ -210,7 +199,7 @@ async function echoAttachments(channelId, session, messenger) {
   if (!session.data.attachments || session.data.attachments.length === 0) return;
   const valid = session.data.attachments.filter((item) => item.path);
   if (valid.length === 0) {
-    return messenger.sendMessage(channelId, 'No saved attachments were available to echo.');
+    return messenger.sendMessage(channelId, FLOW_MESSAGES.attachmentEchoMissing);
   }
 
   const files = await Promise.all(
@@ -285,7 +274,7 @@ function parseStructuredBlock(text) {
 function outcomePrompt(outcome) {
   if (outcome.prompt) return outcome.prompt;
   if (outcome.reason) return outcome.reason;
-  return 'Unable to submit the request. Please try again later.';
+  return FLOW_MESSAGES.automationFailed;
 }
 
 async function runAutomation(channelId, session, automationHandler, messenger, sessionStore) {
@@ -297,9 +286,9 @@ async function runAutomation(channelId, session, automationHandler, messenger, s
     const outcome = parseOutcome(result);
 
     if (outcome.status === 'SUCCESS' || result.success) {
-      messenger.sendMessage(channelId, 'Request submitted successfully.');
+      messenger.sendMessage(channelId, FLOW_MESSAGES.requestSubmitted);
       if (result.confirmation) {
-        messenger.sendImage(channelId, result.confirmation, 'Confirmation image');
+        messenger.sendImage(channelId, result.confirmation, FLOW_MESSAGES.confirmationImageLabel);
       }
       await cleanupSessionFiles(session);
       sessionStore.remove(session.userId);

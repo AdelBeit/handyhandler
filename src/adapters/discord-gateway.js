@@ -4,6 +4,7 @@ const { Client, GatewayIntentBits, ChannelType, Partials } = require('discord.js
 const { createDiscordMessenger } = require('../integrations/messaging/discord');
 const { createSessionStore } = require('../core/session-store');
 const { createSessionFlow } = require('../core/session-flow');
+const { FLOW_MESSAGES } = require('../core/flow-messages');
 
 function loadCommandDefinitions(filePath) {
   try {
@@ -83,7 +84,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
 
     if (!matchesTrigger && !alreadyRunning && !isAttachCommand) {
       if (botMentioned && !normalized) {
-        return messenger.sendMessage(message.channelId, 'yes?');
+        return messenger.sendMessage(message.channelId, FLOW_MESSAGES.yesPrompt);
       }
       return;
     }
@@ -93,10 +94,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       const session = sessionStore.get(message.author.id);
       session.stage = 'attachments';
       session.channelId = message.channelId;
-      return messenger.sendMessage(
-        message.channelId,
-        'Send any photos/documents to attach, or type `skip` to continue without attachments.'
-      );
+      return messenger.sendMessage(message.channelId, FLOW_MESSAGES.attachmentSendPrompt);
     }
 
     if (alreadyRunning && matchesTrigger) {
@@ -114,7 +112,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       const session = sessionStore.get(message.author.id);
       session.stage = 'portal';
       session.channelId = message.channelId;
-      messenger.sendMessage(message.channelId, 'Send your portal URL to get started.');
+      messenger.sendMessage(message.channelId, FLOW_MESSAGES.portalPrompt);
       return;
     }
 
@@ -122,7 +120,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
 
     const session = sessionStore.get(message.author.id);
     if (session.channelId && message.channelId !== session.channelId) {
-      messenger.sendMessage(message.channelId, 'I sent you a DM to continue this request.');
+      messenger.sendMessage(message.channelId, FLOW_MESSAGES.dmContinue);
       return;
     }
     if (!session.channelId && isDm) {
@@ -157,18 +155,15 @@ async function startDmSession(message, sessionStore, messenger) {
     session.channelId = dmChannel.id;
     session.stage = 'portal';
     session.data = {};
-    messenger.sendMessage(
-      dmChannel.id,
-      'Thanks—let’s continue in a DM. Send your portal URL to get started.'
-    );
+    messenger.sendMessage(dmChannel.id, FLOW_MESSAGES.dmStart);
     if (message.channelId !== dmChannel.id) {
-      messenger.sendMessage(message.channelId, 'I sent you a DM to continue this request.');
+      messenger.sendMessage(message.channelId, FLOW_MESSAGES.dmContinue);
     }
   } catch (error) {
     console.warn(`Unable to open DM for user ${userId}: ${error.message}`);
     messenger.sendMessage(
       message.channelId,
-      'I could not open a DM. Please send me a direct message to continue.'
+      FLOW_MESSAGES.dmFailed
     );
   }
 }
@@ -179,12 +174,9 @@ function requestRestartConfirmation(message, session, messenger) {
   }
   session.pendingRestart = true;
   const targetChannelId = session.channelId || message.channelId;
-  messenger.sendMessage(
-    targetChannelId,
-    'You already have a request in progress. Type `start over` to restart or `continue` to keep going.'
-  );
+  messenger.sendMessage(targetChannelId, FLOW_MESSAGES.restartPrompt);
   if (targetChannelId !== message.channelId) {
-    messenger.sendMessage(message.channelId, 'I sent you a DM to continue this request.');
+    messenger.sendMessage(message.channelId, FLOW_MESSAGES.dmContinue);
   }
 }
 
