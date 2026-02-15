@@ -8,3 +8,4 @@
 - [x] TICKET-010: Add a Discord messaging channel (bot token/webhook) as a second transport option
 - [x] TICKET-012: Move "new request" Discord intake to DMs before collecting portal credentials
 - [x] TICKET-011: Allow Discord sessions to restart mid-flow when the user issues another trigger (e.g., "new request"), including a clear "start over" confirmation
+- [x] TICKET-013: Allow users to send images/documents for maintenance requests and delete after submission

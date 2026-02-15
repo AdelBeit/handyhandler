@@ -9,7 +9,8 @@
 - **TICKET-009 (Discord credential reuse)** – Todo: encrypt reuse with Discord user ID + PIN.
 - **TICKET-012 (Discord DM for sensitive intake)** – Done: https://github.com/AdelBeit/handyhandler/pull/8
 - **TICKET-011 (Discord restart flow)** – Done: https://github.com/AdelBeit/handyhandler/pull/9
-- **TICKET-013 (User attachments)** – In Review: accept user images/docs, store in `tmp`, delete after submission. https://github.com/AdelBeit/handyhandler/pull/10
+- **TICKET-013 (User attachments)** – Done: https://github.com/AdelBeit/handyhandler/pull/10
 - **TICKET-014 (Attachment URL server)** – Todo: one-time-token local server URLs for automation to fetch attachments.
 - **TICKET-015 (Session state manager)** – Todo: per-session state/asset management for multi-stage back-and-forth.
 - **TICKET-016 (Session cleanup)** – Todo: cleanup dangling sessions/assets after 24 hours or when TinyFish fails and awaits user input, notify users, remove temp assets.
+- **TICKET-017 (Sort request lists)** – Todo: each category (new/resolved/etc.) should sort by created/filled date descending (newest first).
