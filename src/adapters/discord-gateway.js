@@ -105,9 +105,16 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       return;
     }
 
-    if (!alreadyRunning && matchesTrigger && !isDm) {
-      if (!botMentioned && !channelId) return;
-      startDmSession(message, sessionStore, messenger);
+    if (!alreadyRunning && matchesTrigger) {
+      if (!isDm) {
+        if (!botMentioned && !channelId) return;
+        startDmSession(message, sessionStore, messenger);
+        return;
+      }
+      const session = sessionStore.get(message.author.id);
+      session.stage = 'portal';
+      session.channelId = message.channelId;
+      messenger.sendMessage(message.channelId, 'Send your portal URL to get started.');
       return;
     }
 
