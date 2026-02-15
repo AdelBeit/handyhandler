@@ -10,3 +10,4 @@
 - [x] TICKET-011: Allow Discord sessions to restart mid-flow when the user issues another trigger (e.g., "new request"), including a clear "start over" confirmation
 - [x] TICKET-013: Allow users to send images/documents for maintenance requests and delete after submission
 - [x] TICKET-015: Handle remediation when the agent needs more info/images and keep sessions open until the user responds
+- [x] TICKET-022: Confirm inferred field values and safely accept only enumerated options when user says no
