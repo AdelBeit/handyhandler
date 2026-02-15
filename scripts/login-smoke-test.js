@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Login-focused smoke test: verifies TinyFish can log in and report active maintenance requests.
 const fs = require('fs');
 const path = require('path');
 const { getCredentialById } = require('../src/secrets/credentials');
@@ -8,14 +9,14 @@ const repoRoot = path.resolve(__dirname, '..');
 const envFile = path.join(repoRoot, '.env');
 const env = fs.existsSync(envFile)
   ? fs.readFileSync(envFile, 'utf8')
-      .split(/\r?\n/)
-      .reduce((acc, line) => {
-        if (!line || line.trim().startsWith('#')) return acc;
-        const idx = line.indexOf('=');
-        if (idx === -1) return acc;
-        acc[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
-        return acc;
-      }, {})
+    .split(/\r?\n/)
+    .reduce((acc, line) => {
+      if (!line || line.trim().startsWith('#')) return acc;
+      const idx = line.indexOf('=');
+      if (idx === -1) return acc;
+      acc[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+      return acc;
+    }, {})
   : {};
 
 const apiKey = process.env.TINYFISH_API_KEY || env.TINYFISH_API_KEY;
@@ -25,7 +26,6 @@ if (!apiKey) {
 }
 
 const credentialId = process.argv[3] || 'demo-tenant-001';
-const goalDescription = process.argv[4] || 'Test request: smoke test.';
 const portalOverride = process.argv[2];
 const baseUrlOverride = process.argv[5];
 
@@ -56,12 +56,7 @@ if (!portalUrl) {
   process.exit(1);
 }
 
-const goalParts = [
-  'Submit a maintenance request (smoke test).',
-  `Issue: ${goalDescription}`,
-  'After login, report how many active maintenance requests this account can see on the landing page.',
-];
-const goal = goalParts.join(' ');
+const goal = 'After login, report how many active maintenance requests this account can see on the landing page.';
 
 const runner = createTinyFishRunner({
   apiKey,
