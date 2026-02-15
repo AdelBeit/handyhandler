@@ -6,3 +6,4 @@
 - [ ] TICKET-009: Add optional credential reuse flow – if the user agrees, encrypt credentials using their Discord user ID + PIN so future Discord sessions can reuse login data securely.
 - [ ] TICKET-014: Provide one-time-token local server URLs for user attachments so automation can fetch them during a run.
 - [ ] TICKET-015: Introduce per-session state management to support multi-stage back-and-forth when extra info is needed (store assets and responses per session).
+- [ ] TICKET-016: Cleanup dangling sessions/assets after 24 hours or when TinyFish fails and awaits user input. Notify the user on timeout/failure and remove temp assets.
