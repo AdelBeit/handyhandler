@@ -20,6 +20,15 @@ function buildGoal(input) {
     'After submitting, verify success by locating a confirmation ID or the new request in the requests list.'
   );
   parts.push('Report the confirmation ID/status or the exact list entry details as proof of submission.');
+  parts.push(
+    'If submission fails, respond with a structured block exactly like:\n' +
+      'STATUS: FAILED\n' +
+      'REASON: <short reason>\n' +
+      'ACTION: <USER_ACTION_REQUIRED | RETRY_LATER | BLOCKED | UNKNOWN>\n' +
+      'SUGGESTED_PROMPT: <message for the user>\n' +
+      'FIELDS: [<optional list of fields or corrections>]\n' +
+      'If submission succeeds, respond with: STATUS: SUCCESS'
+  );
   return parts.join(' ');
 }
 
