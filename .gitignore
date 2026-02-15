@@ -6,4 +6,3 @@ yarn-debug.log*
 yarn-error.log*
 /data/credentials.json
 /tmp/
-/data/credentials.enc

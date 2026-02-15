@@ -1,7 +1,6 @@
 Backlog
 
 Post-MVP (Phase 1.5)
-- Implement encrypted credential vault with AES-GCM and tie it into automation runner (per `tinyfishdesigniteration.md`).
 - Define failure-state UX and recovery messaging
 - Logging and traceability plan for proof-of-submission (what is stored, retention)
 - Human-in-the-loop operational process (SLA, staffing, escalation policy)
