@@ -1,6 +1,7 @@
 Backlog
 
-Post-MVP (Phase 1.5)
+-Post-MVP (Phase 1.5)
+-Document Twilio/Discord integration requirements and how messaging stays decoupled from business logic.
 - Define failure-state UX and recovery messaging
 - Logging and traceability plan for proof-of-submission (what is stored, retention)
 - Human-in-the-loop operational process (SLA, staffing, escalation policy)
