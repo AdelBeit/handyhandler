@@ -131,6 +131,75 @@ function createDiscordMessenger({ botToken }) {
     });
   }
 
+  function sendFiles(channelId, files, content) {
+    if (!channelId) {
+      return Promise.reject(new Error('Channel ID is required.'));
+    }
+    if (!Array.isArray(files) || files.length === 0) {
+      return Promise.reject(new Error('Files are required.'));
+    }
+
+    const boundary = `----discordform${Date.now()}`;
+    const payload = JSON.stringify({ content });
+
+    let body = Buffer.from(
+      `--${boundary}\r\n` +
+        `Content-Disposition: form-data; name="payload_json"\r\n` +
+        `Content-Type: application/json\r\n\r\n` +
+        `${payload}\r\n`,
+      'utf8'
+    );
+
+    files.forEach((file, idx) => {
+      const filename = file.filename || `attachment-${idx + 1}`;
+      const mimeType = file.contentType || 'application/octet-stream';
+      const header =
+        `--${boundary}\r\n` +
+        `Content-Disposition: form-data; name="files[${idx}]"; filename="${filename}"\r\n` +
+        `Content-Type: ${mimeType}\r\n\r\n`;
+      body = Buffer.concat([body, Buffer.from(header, 'utf8'), file.buffer, Buffer.from('\r\n', 'utf8')]);
+    });
+
+    body = Buffer.concat([body, Buffer.from(`--${boundary}--\r\n`, 'utf8')]);
+
+    const options = {
+      hostname: 'discord.com',
+      port: 443,
+      path: `/api/v10/channels/${channelId}/messages`,
+      method: 'POST',
+      headers: {
+        Authorization: `Bot ${botToken}`,
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        'Content-Length': body.length,
+      },
+    };
+
+    return new Promise((resolve, reject) => {
+      const req = https.request(options, (res) => {
+        let raw = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => (raw += chunk));
+        res.on('end', () => {
+          try {
+            const payloadResponse = JSON.parse(raw);
+            if (res.statusCode >= 400) {
+              const message = payloadResponse.message || raw;
+              reject(new Error(`Discord error ${res.statusCode}: ${message}`));
+            } else {
+              resolve(payloadResponse);
+            }
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
+
+      req.on('error', (err) => reject(err));
+      req.write(body);
+      req.end();
+    });
+  }
+
   function sendMessage(channelId, content) {
     if (!channelId || !content) {
       return Promise.reject(new Error('Channel ID and message content are required.'));
@@ -175,7 +244,7 @@ function createDiscordMessenger({ botToken }) {
     });
   }
 
-  return { sendMessage, sendImage };
+  return { sendMessage, sendImage, sendFiles };
 }
 
 module.exports = { createDiscordMessenger };

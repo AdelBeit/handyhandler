@@ -205,10 +205,13 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
           );
         }
         if (/^(skip|done)$/i.test(clean)) {
+          await echoAttachments(message.channelId, session);
+          const summary = formatAttachmentSummary(session);
           session.stage = 'confirm';
           return messenger.sendMessage(
             message.channelId,
-            'Thanks! Type `yes` to submit the request or `cancel` to abort.'
+            summary ||
+              'No attachments saved. Type `yes` to submit the request or `cancel` to abort.'
           );
         }
         return messenger.sendMessage(
@@ -311,6 +314,16 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     }
   }
 
+  function formatAttachmentSummary(session) {
+    if (!session.data.attachments || session.data.attachments.length === 0) return '';
+    const lines = session.data.attachments.map((item) => {
+      const label = item.filename || path.basename(item.path || '') || 'attachment';
+      const location = item.path ? `saved at ${item.path}` : 'save failed';
+      return `- ${label}: ${location}`;
+    });
+    return `Saved attachments:\n${lines.join('\n')}`;
+  }
+
   function downloadAttachment(tempDir, attachment) {
     const filename = attachment.filename || `attachment-${Date.now()}`;
     const safeName = filename.replace(/[^\w.\-]+/g, '_');
@@ -344,6 +357,27 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
         console.warn(`Failed to cleanup temp dir ${session.tempDir}: ${err.message}`);
       }
     }
+  }
+
+  async function echoAttachments(channelId, session) {
+    if (!session.data.attachments || session.data.attachments.length === 0) return;
+    const valid = session.data.attachments.filter((item) => item.path);
+    if (valid.length === 0) {
+      return messenger.sendMessage(channelId, 'No saved attachments were available to echo.');
+    }
+
+    const files = await Promise.all(
+      valid.map(async (item) => {
+        const buffer = await fs.promises.readFile(item.path);
+        return {
+          buffer,
+          filename: item.filename || path.basename(item.path),
+          contentType: item.contentType,
+        };
+      })
+    );
+
+    return messenger.sendFiles(channelId, files, 'Echoing saved attachments.');
   }
 
   return { client };
