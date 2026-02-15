@@ -1,6 +1,3 @@
 # TODO
 
-- [ ] TICKET-005: Run full maintenance smoke test once the portal can accept a new request (submit a real ticket, validate TinyFish response plus landing-page count update).
-- [ ] TICKET-006: Design/ticket the SMS credential capture flow: prompt for portal URL, username, password, and consent before storing them (encrypted vault) for MVP.
-- [ ] TICKET-007: Design an SMS remediation path when portals ask for extra/unspecified info (send targeted "need more info" prompts, capture data, keep user in the loop).
-- [ ] TICKET-008: Add optional credential reuse flow – if the user agrees, encrypt credentials using their phone number + PIN so future SMS sessions can reuse login data securely.
+- [ ] TICKET-005: Run full maintenance smoke test via `scripts/maintenance-smoke-test.js` (submit a real request after login, validate the response, and confirm the landing page reflects the updated ticket count).
