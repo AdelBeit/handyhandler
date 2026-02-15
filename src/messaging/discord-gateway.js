@@ -422,6 +422,9 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
   async function runAutomation(channelId, session) {
     try {
       const result = await automationHandler.run(session.data);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Automation raw result:', JSON.stringify(result && result.raw, null, 2));
+      }
       const outcome = parseOutcome(result);
 
       if (outcome.status === 'SUCCESS' || result.success) {
