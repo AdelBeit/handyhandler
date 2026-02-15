@@ -13,4 +13,3 @@
 - **TICKET-014 (Attachment URL server)** – Todo: one-time-token local server URLs for automation to fetch attachments.
 - **TICKET-015 (Session state manager)** – Todo: per-session state/asset management for multi-stage back-and-forth.
 - **TICKET-016 (Session cleanup)** – Todo: cleanup dangling sessions/assets after 24 hours or when TinyFish fails and awaits user input, notify users, remove temp assets.
-- **TICKET-017 (Sort request lists)** – Todo: each category (new/resolved/etc.) should sort by created/filled date descending (newest first).
