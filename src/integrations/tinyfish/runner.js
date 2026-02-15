@@ -28,6 +28,7 @@ function createTinyFishRunner(options) {
         const events = [];
         let resolved = false;
         let buffer = '';
+        let confirmation = null;
 
         const request = https.request(
           {
@@ -72,10 +73,14 @@ function createTinyFishRunner(options) {
                   events.push(event);
                   if (opts && opts.onEvent) opts.onEvent(event);
 
+                  const candidate = extractConfirmation(event);
+                  if (candidate) confirmation = candidate;
+
                   if (event.type === 'COMPLETE' && !resolved) {
                     resolved = true;
                     resolve({
                       success: event.status === 'COMPLETED',
+                      confirmation,
                       raw: event,
                       events,
                     });
@@ -89,6 +94,7 @@ function createTinyFishRunner(options) {
                 resolved = true;
                 resolve({
                   success: false,
+                  confirmation,
                   raw: { type: 'END_OF_STREAM' },
                   events,
                 });
@@ -109,6 +115,57 @@ function createTinyFishRunner(options) {
       });
     },
   };
+}
+
+function extractConfirmation(event) {
+  if (!event || typeof event !== 'object') return null;
+
+  const direct = pickImageCandidate(event);
+  if (direct) return direct;
+
+  if (event.data && typeof event.data === 'object') {
+    const fromData = pickImageCandidate(event.data);
+    if (fromData) return fromData;
+  }
+
+  if (event.payload && typeof event.payload === 'object') {
+    const fromPayload = pickImageCandidate(event.payload);
+    if (fromPayload) return fromPayload;
+  }
+
+  return null;
+}
+
+function pickImageCandidate(obj) {
+  const keys = [
+    'confirmation',
+    'confirmationImage',
+    'confirmation_image',
+    'screenshot',
+    'screenshotUrl',
+    'screenshot_url',
+    'imageUrl',
+    'image_url',
+    'artifactUrl',
+    'artifact_url',
+    'url',
+  ];
+
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value !== 'string') continue;
+    if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image/')) {
+      if (obj.type && typeof obj.type === 'string') {
+        const upper = obj.type.toUpperCase();
+        if (!upper.includes('SCREENSHOT') && !upper.includes('CONFIRM') && !upper.includes('ARTIFACT')) {
+          continue;
+        }
+      }
+      return value;
+    }
+  }
+
+  return null;
 }
 
 module.exports = {

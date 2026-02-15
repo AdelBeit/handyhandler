@@ -178,6 +178,13 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
                 message.channelId,
                 `Request submitted. Result: ${result.success ? 'success' : 'failure'}.`
               );
+              if (result.success && result.confirmation) {
+                messenger.sendImage(
+                  message.channelId,
+                  result.confirmation,
+                  'Confirmation image'
+                );
+              }
             })
             .catch((err) => {
               messenger.sendMessage(message.channelId, `Error: ${err.message}`);
