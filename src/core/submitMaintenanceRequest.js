@@ -1,12 +1,9 @@
 const { getCredentialById } = require('../secrets/credentials');
 const { createTinyFishRunner } = require('../integrations/tinyfish/runner');
 
-function buildGoal(input, credential) {
+function buildGoal(input) {
   const parts = [];
   parts.push('Submit a maintenance request.');
-  if (credential && credential.username && credential.password) {
-    parts.push(`Log in with username ${credential.username} and password ${credential.password}.`);
-  }
   if (input.issue && input.issue.description) {
     parts.push(`Issue: ${input.issue.description}`);
   }
@@ -19,7 +16,6 @@ function buildGoal(input, credential) {
   if (input.issue && input.issue.category) {
     parts.push(`Category: ${input.issue.category}`);
   }
-  parts.push('Also report how many active maintenance requests this account currently has.');
   return parts.join(' ');
 }
 
@@ -47,7 +43,7 @@ function submitMaintenanceRequest(input) {
     baseUrl: input.baseUrl,
   });
 
-  const goal = buildGoal(input, credential);
+  const goal = buildGoal(input);
 
   return runner.run({
     portalUrl: input.portalUrl,
