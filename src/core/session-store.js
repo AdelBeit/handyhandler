@@ -40,8 +40,8 @@ function createSessionStore() {
     const entry = {
       at: new Date().toISOString(),
       type: 'user',
-      content: message.content,
-      attachments: message.attachments ? message.attachments.size : 0,
+      content: message.content || '',
+      attachments: message.attachmentsCount || 0,
     };
     session.data.history.push(entry);
     session.data.responses.push({

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const path = require('path');
 const fs = require('fs');
-const { createDiscordGateway } = require('../src/messaging/discord-gateway');
+const { createDiscordGateway } = require('../src/adapters/discord-gateway');
 
 function loadEnv(filePath) {
   if (!fs.existsSync(filePath)) return {};
