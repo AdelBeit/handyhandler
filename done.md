@@ -7,3 +7,4 @@
 - [x] TICKET-005: Run full maintenance smoke test via `scripts/maintenance-smoke-test.js` (login + submission + landing-page count)
 - [x] TICKET-010: Add a Discord messaging channel (bot token/webhook) as a second transport option
 - [x] TICKET-012: Move "new request" Discord intake to DMs before collecting portal credentials
+- [x] TICKET-011: Allow Discord sessions to restart mid-flow when the user issues another trigger (e.g., "new request"), including a clear "start over" confirmation
