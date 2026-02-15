@@ -4,7 +4,7 @@
 - **TICKET-005 (full maintenance smoke test)** – Done: `scripts/maintenance-smoke-test.js` validated the full maintenance flow.
 - **TICKET-006 (Discord setup)** – Done: configured bot token, decoupled messaging, and CLI send check.
 - **TICKET-010 (Discord messaging channel)** – Done: https://github.com/AdelBeit/handyhandler/pull/7
-- **TICKET-015 (More info remediation)** – In Review: prompt user for details/attachments when TinyFish reports "more info needed". https://github.com/AdelBeit/handyhandler/pull/11
+- **TICKET-015 (More info remediation)** – In Review: prompt user for details/attachments when automation reports "more info needed". https://github.com/AdelBeit/handyhandler/pull/11
 - **TICKET-014 (Attachment URL server)** – Todo: one-time-token local server URLs for automation to fetch attachments.
 - **TICKET-016 (Session cleanup)** – Todo: cleanup dangling sessions/assets after 24 hours or when TinyFish fails and awaits user input, notify users, remove temp assets.
 - **TICKET-018 (Log cleanup schedule)** – Todo: scheduled cleanup of logs (e.g., every 7 days).
