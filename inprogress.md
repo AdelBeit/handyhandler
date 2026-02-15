@@ -1,5 +1,5 @@
 # IN PROGRESS
 
-- [ ] TICKET-005: Run full maintenance smoke test via `scripts/maintenance-smoke-test.js`
-  - branch: ticket-maintenance-smoke
-  - started: 2026-02-15 04:00 UTC
+- [ ] TICKET-006: MVP Twilio setup – configure Twilio API keys, decoupled messaging layer, CLI command that sends a test SMS.
+  - branch: ticket-twilio-setup
+  - started: 2026-02-15 04:30 UTC
