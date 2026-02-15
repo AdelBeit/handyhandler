@@ -1,9 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 const { Client, GatewayIntentBits, ChannelType, Partials } = require('discord.js');
 const { createDiscordMessenger } = require('../integrations/messaging/discord');
 
-const STAGES = ['portal', 'username', 'password', 'issue', 'confirm'];
+const STAGES = ['portal', 'username', 'password', 'issue', 'attachments', 'confirm'];
 
 function loadCommandDefinitions(filePath) {
   try {
@@ -82,7 +83,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     if (!alreadyRunning && !isDm && !botMentioned) return;
     const userId = message.author.id;
     const session = getSession(userId);
-    handleSessionMessage(message, session);
+    void handleSessionMessage(message, session);
   });
 
   client.login(botToken).catch((err) => {
@@ -91,7 +92,11 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
 
   function getSession(userId) {
     if (!sessions.has(userId)) {
-      sessions.set(userId, { stage: STAGES[0], data: {} });
+      sessions.set(userId, {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        stage: STAGES[0],
+        data: {},
+      });
     }
     return sessions.get(userId);
   }
@@ -120,7 +125,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     }
   }
 
-  function handleSessionMessage(message, session) {
+  async function handleSessionMessage(message, session) {
     if (session.channelId && message.channelId !== session.channelId) {
       return messenger.sendMessage(message.channelId, 'I sent you a DM to continue this request.');
     }
@@ -130,6 +135,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     const clean = message.content.trim();
     if (session.pendingRestart) {
       if (/^start over$/i.test(clean) || /^yes$/i.test(clean)) {
+        await cleanupSessionFiles(session);
         session.stage = 'portal';
         session.data = {};
         session.pendingRestart = false;
@@ -145,6 +151,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       );
     }
     if (/^cancel$/i.test(clean)) {
+      await cleanupSessionFiles(session);
       sessions.delete(message.author.id);
       return messenger.sendMessage(message.channelId, 'Session cancelled. Send “new request” to restart.');
     }
@@ -164,11 +171,32 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
         return messenger.sendMessage(message.channelId, 'Describe the maintenance issue.');
       case 'issue':
         session.data.issueDescription = clean;
-        session.stage = 'confirm';
+        session.stage = 'attachments';
         return messenger.sendMessage(
           message.channelId,
-          'Thanks! Type `yes` to submit the request or `cancel` to abort.'
+          'If you have photos or documents to attach, send them now. Type `skip` to continue without attachments.'
         );
+      case 'attachments': {
+        const attachments = extractAttachments(message);
+        if (attachments.length) {
+          await persistAttachments(session, attachments);
+          return messenger.sendMessage(
+            message.channelId,
+            `Saved ${attachments.length} attachment(s). Send more or type \`done\` to continue.`
+          );
+        }
+        if (/^(skip|done)$/i.test(clean)) {
+          session.stage = 'confirm';
+          return messenger.sendMessage(
+            message.channelId,
+            'Thanks! Type `yes` to submit the request or `cancel` to abort.'
+          );
+        }
+        return messenger.sendMessage(
+          message.channelId,
+          'Please attach images/documents, or type `skip` to continue.'
+        );
+      }
       case 'confirm':
         if (/^yes$/i.test(clean)) {
           automationHandler
@@ -189,7 +217,9 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
             .catch((err) => {
               messenger.sendMessage(message.channelId, `Error: ${err.message}`);
             })
-            .finally(() => sessions.delete(message.author.id));
+            .finally(() => {
+              cleanupSessionFiles(session).finally(() => sessions.delete(message.author.id));
+            });
         } else {
           messenger.sendMessage(message.channelId, 'Type `yes` when you’re ready or `cancel` to stop.');
         }
@@ -210,6 +240,8 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
         return 'Send the password when you are ready.';
       case 'issue':
         return 'Describe the maintenance issue.';
+      case 'attachments':
+        return 'Send any photos or type `skip` to continue.';
       case 'confirm':
         return 'Type `yes` to submit the request or `cancel` to abort.';
       default:
@@ -229,6 +261,69 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     );
     if (targetChannelId !== message.channelId) {
       messenger.sendMessage(message.channelId, 'I sent you a DM to continue this request.');
+    }
+  }
+
+  function extractAttachments(message) {
+    if (!message.attachments || message.attachments.size === 0) return [];
+    return Array.from(message.attachments.values())
+      .map((attachment) => ({
+        url: attachment.url,
+        filename: attachment.name,
+        contentType: attachment.contentType,
+        size: attachment.size,
+      }))
+      .filter((attachment) => attachment.url);
+  }
+
+  async function persistAttachments(session, attachments) {
+    if (!session.data.attachments) session.data.attachments = [];
+    if (!session.tempDir) {
+      const repoRoot = path.resolve(__dirname, '../..');
+      session.tempDir = path.join(repoRoot, 'tmp', 'attachments', session.id);
+      await fs.promises.mkdir(session.tempDir, { recursive: true });
+    }
+
+    const saved = await Promise.all(
+      attachments.map((attachment) => downloadAttachment(session.tempDir, attachment))
+    );
+    for (const entry of saved) {
+      if (entry) session.data.attachments.push(entry);
+    }
+  }
+
+  function downloadAttachment(tempDir, attachment) {
+    const filename = attachment.filename || `attachment-${Date.now()}`;
+    const safeName = filename.replace(/[^\w.\-]+/g, '_');
+    const filePath = path.join(tempDir, safeName);
+
+    return new Promise((resolve) => {
+      const file = fs.createWriteStream(filePath);
+      https
+        .get(attachment.url, (res) => {
+          if (res.statusCode && res.statusCode >= 400) {
+            res.resume();
+            resolve({ ...attachment, path: null, error: `HTTP ${res.statusCode}` });
+            return;
+          }
+          res.pipe(file);
+          file.on('finish', () => {
+            file.close(() => resolve({ ...attachment, path: filePath }));
+          });
+        })
+        .on('error', (err) => {
+          resolve({ ...attachment, path: null, error: err.message });
+        });
+    });
+  }
+
+  async function cleanupSessionFiles(session) {
+    if (session.tempDir) {
+      try {
+        await fs.promises.rm(session.tempDir, { recursive: true, force: true });
+      } catch (err) {
+        console.warn(`Failed to cleanup temp dir ${session.tempDir}: ${err.message}`);
+      }
     }
   }
 
