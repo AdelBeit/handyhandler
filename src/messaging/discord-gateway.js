@@ -155,6 +155,13 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       sessions.delete(message.author.id);
       return messenger.sendMessage(message.channelId, 'Session cancelled. Send “new request” to restart.');
     }
+    if (/^attach$/i.test(clean)) {
+      session.stage = 'attachments';
+      return messenger.sendMessage(
+        message.channelId,
+        'Send any photos/documents to attach, or type `skip` to continue without attachments.'
+      );
+    }
 
     switch (session.stage) {
       case 'portal':
@@ -180,9 +187,10 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
         const attachments = extractAttachments(message);
         if (attachments.length) {
           await persistAttachments(session, attachments);
+          const summary = attachments.map((item) => item.filename || 'attachment').join(', ');
           return messenger.sendMessage(
             message.channelId,
-            `Saved ${attachments.length} attachment(s). Send more or type \`done\` to continue.`
+            `Saved ${attachments.length} attachment(s): ${summary}. Send more or type \`done\` to continue.`
           );
         }
         if (/^(skip|done)$/i.test(clean)) {
