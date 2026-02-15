@@ -3,8 +3,9 @@ const path = require('path');
 const https = require('https');
 const { Client, GatewayIntentBits, ChannelType, Partials } = require('discord.js');
 const { createDiscordMessenger } = require('../integrations/messaging/discord');
+const { createSessionStore } = require('./session-store');
 
-const STAGES = ['portal', 'username', 'password', 'issue', 'attachments', 'confirm'];
+const STAGES = ['portal', 'username', 'password', 'issue', 'attachments', 'confirm', 'remediation'];
 
 function loadCommandDefinitions(filePath) {
   try {
@@ -48,7 +49,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     partials: [Partials.Channel],
   });
   const messenger = createDiscordMessenger({ botToken });
-  const sessions = new Map();
+  const sessionStore = createSessionStore();
   const commandRegexes = loadCommands();
 
   client.once('clientReady', () => {
@@ -60,7 +61,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     if (channelId && message.channel.type !== ChannelType.DM && message.channelId !== channelId) return;
     const rawContent = message.content.trim();
     const normalized = stripBotMention(rawContent, client.user).toLowerCase();
-    const alreadyRunning = sessions.has(message.author.id);
+    const alreadyRunning = sessionStore.has(message.author.id);
     const matchesTrigger = commandRegexes.some((regex) => regex.test(normalized));
     const isAttachCommand = /^attach$/i.test(normalized);
     const isDm = message.channel.type === ChannelType.DM;
@@ -94,6 +95,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     if (!alreadyRunning && !isDm && !botMentioned) return;
     const userId = message.author.id;
     const session = getSession(userId);
+    sessionStore.recordUserMessage(session, message);
     void handleSessionMessage(message, session);
   });
 
@@ -102,14 +104,11 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
   });
 
   function getSession(userId) {
-    if (!sessions.has(userId)) {
-      sessions.set(userId, {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        stage: STAGES[0],
-        data: {},
-      });
+    const session = sessionStore.get(userId);
+    if (!STAGES.includes(session.stage)) {
+      session.stage = STAGES[0];
     }
-    return sessions.get(userId);
+    return session;
   }
 
   async function startDmSession(message) {
@@ -163,7 +162,7 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     }
     if (/^cancel$/i.test(clean)) {
       await cleanupSessionFiles(session);
-      sessions.delete(message.author.id);
+      sessionStore.remove(message.author.id);
       return messenger.sendMessage(message.channelId, 'Session cancelled. Send “new request” to restart.');
     }
     if (/^attach$/i.test(clean)) {
@@ -171,6 +170,13 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       return messenger.sendMessage(
         message.channelId,
         'Send any photos/documents to attach, or type `skip` to continue without attachments.'
+      );
+    }
+    if (/^more info$/i.test(clean)) {
+      session.stage = 'remediation';
+      return messenger.sendMessage(
+        message.channelId,
+        'Please provide the extra information requested. Type `done` when finished.'
       );
     }
 
@@ -240,12 +246,25 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
               messenger.sendMessage(message.channelId, `Error: ${err.message}`);
             })
             .finally(() => {
-              cleanupSessionFiles(session).finally(() => sessions.delete(message.author.id));
+              cleanupSessionFiles(session).finally(() => sessionStore.remove(message.author.id));
             });
         } else {
           messenger.sendMessage(message.channelId, 'Type `yes` when you’re ready or `cancel` to stop.');
         }
         return;
+      case 'remediation':
+        if (/^done$/i.test(clean)) {
+          session.stage = 'confirm';
+          return messenger.sendMessage(
+            message.channelId,
+            'Thanks. Type `yes` to submit the request or `cancel` to abort.'
+          );
+        }
+        sessionStore.recordExtra(session, clean);
+        return messenger.sendMessage(
+          message.channelId,
+          'Noted. Send more details or type `done` when finished.'
+        );
       default:
         session.stage = 'portal';
         return messenger.sendMessage(message.channelId, 'Send your portal URL to get started.');
@@ -264,6 +283,8 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
         return 'Describe the maintenance issue.';
       case 'attachments':
         return 'Send any photos or type `skip` to continue.';
+      case 'remediation':
+        return 'Please provide the extra information requested.';
       case 'confirm':
         return 'Type `yes` to submit the request or `cancel` to abort.';
       default:
