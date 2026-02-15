@@ -12,3 +12,4 @@
 - **TICKET-013 (User attachments)** – In Review: accept user images/docs, store in `tmp`, delete after submission. https://github.com/AdelBeit/handyhandler/pull/10
 - **TICKET-014 (Attachment URL server)** – Todo: one-time-token local server URLs for automation to fetch attachments.
 - **TICKET-015 (Session state manager)** – Todo: per-session state/asset management for multi-stage back-and-forth.
+- **TICKET-016 (Session cleanup)** – Todo: cleanup dangling sessions/assets after 24 hours or when TinyFish fails and awaits user input, notify users, remove temp assets.
