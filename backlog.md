@@ -9,6 +9,7 @@
 - **TICKET-016 (Session cleanup)** – Todo: cleanup dangling sessions/assets after 24 hours or when TinyFish fails and awaits user input, notify users, remove temp assets.
 - **TICKET-018 (Log cleanup schedule)** – Todo: scheduled cleanup of logs (e.g., every 7 days).
 - **TICKET-019 (Session persistence)** – Todo: persist sessions to a JSON file so they survive restarts.
+- **TICKET-020 (Request status lookup)** – Todo: allow users to request maintenance status; if no specific request is named, return top 5 open requests and prompt for specific/all/cancelled/resolved filters.
 - **TICKET-009 (Discord credential reuse)** – Todo: encrypt reuse with Discord user ID + PIN.
 - **TICKET-007 (Discord credential capture)** – Todo: portal URL, username, password, consent flow.
 - **TICKET-012 (Discord DM for sensitive intake)** – Done: https://github.com/AdelBeit/handyhandler/pull/8
