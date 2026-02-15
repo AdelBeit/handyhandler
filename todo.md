@@ -1,7 +1,6 @@
 ## TODO
 
 - [x] TICKET-006: MVP Discord setup – configure Discord bot token via `.env`, add a decoupled messaging layer, and provide a CLI test command that sends a Discord message.
-- [ ] TICKET-015: Introduce per-session state management to support multi-stage back-and-forth (including remediation prompts for extra info), storing assets/responses per session.
 - [ ] TICKET-014: Provide one-time-token local server URLs for user attachments so automation can fetch them during a run.
 - [ ] TICKET-016: Cleanup dangling sessions/assets after 24 hours or when TinyFish fails and awaits user input. Notify the user on timeout/failure and remove temp assets.
 - [ ] TICKET-009: Add optional credential reuse flow – if the user agrees, encrypt credentials using their Discord user ID + PIN so future Discord sessions can reuse login data securely.
