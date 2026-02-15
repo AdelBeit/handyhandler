@@ -1,0 +1,8 @@
+[
+  { "phrase": "make request", "description": "Start a standard maintenance ticket." },
+  { "phrase": "make a maintenance request", "description": "Verbal trigger." },
+  { "phrase": "new maintenance request", "description": "Alias for the same action." },
+  { "phrase": "new request", "description": "Short alias for a maintenance ticket." },
+  { "phrase": "make a new maintenance request", "description": "Expanded command." },
+  { "phrase": "make a new request", "description": "Another alias." }
+]

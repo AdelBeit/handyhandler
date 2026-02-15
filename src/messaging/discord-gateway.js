@@ -1,7 +1,39 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
+const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
 const { createDiscordMessenger } = require('../integrations/messaging/discord');
 
 const STAGES = ['portal', 'username', 'password', 'issue', 'confirm'];
+
+function loadCommandDefinitions(filePath) {
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(raw);
+  } catch (error) {
+    console.warn(`Unable to load Discord command definitions from ${filePath}: ${error.message}`);
+    return [];
+  }
+}
+
+function buildCommandRegex(phrase) {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${escaped}$`, 'i');
+}
+
+function loadCommands() {
+  const commandsPath = path.resolve(__dirname, '../../data/commands.json');
+  const commandDefinitions = loadCommandDefinitions(commandsPath);
+  if (!commandDefinitions.length) {
+    return [/^make (a )?maintenance request$/i, /^new maintenance request$/i];
+  }
+  return commandDefinitions.map((def) => buildCommandRegex(def.phrase));
+}
+
+function stripBotMention(content, clientUser) {
+  if (!clientUser) return content;
+  const mentionPattern = new RegExp(`<@!?(?:${clientUser.id})>`, 'gi');
+  return content.replace(mentionPattern, '').trim();
+}
 
 function createDiscordGateway({ botToken, channelId, automationHandler }) {
   if (!botToken) throw new Error('DISCORD_BOT_TOKEN is required for the gateway.');
@@ -10,14 +42,28 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
   });
   const messenger = createDiscordMessenger({ botToken });
   const sessions = new Map();
+  const commandRegexes = loadCommands();
 
-  client.once('ready', () => {
+  client.once('clientReady', () => {
     console.log(`Discord gateway ready as ${client.user.tag}`);
   });
 
   client.on('messageCreate', (message) => {
     if (message.author.bot) return;
     if (channelId && message.channelId !== channelId) return;
+    const rawContent = message.content.trim();
+    const normalized = stripBotMention(rawContent, client.user).toLowerCase();
+    const alreadyRunning = sessions.has(message.author.id);
+    const matchesTrigger = commandRegexes.some((regex) => regex.test(normalized));
+    const isDm = message.channel.type === ChannelType.DM;
+    const botMentioned = client.user ? message.mentions.has(client.user.id) : false;
+    if (!matchesTrigger && !alreadyRunning) {
+      if (botMentioned && !normalized) {
+        return messenger.sendMessage(message.channelId, 'yes?');
+      }
+      return;
+    }
+    if (!alreadyRunning && !isDm && !botMentioned) return;
     const userId = message.author.id;
     const session = getSession(userId);
     handleSessionMessage(message, session);
