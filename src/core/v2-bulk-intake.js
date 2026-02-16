@@ -10,7 +10,7 @@ function buildBulkIntakeSystemPrompt() {
     'Return a structured block with:',
     'STATUS: SUCCESS or FAILED',
     'ACTION: NEEDS_INFO or USER_ACTION_REQUIRED when required fields are missing',
-    `FIELDS: { ${BULK_INTAKE_FIELD_KEYS} } (only include fields you are confident about)`,
+    `FIELDS: {"portalUrl":"...","username":"...","password":"...","issueDescription":"..."} (only include fields you are confident about)`,
     'REASON: short reason if fields are missing',
     'SUGGESTED_PROMPT: a concise question to ask the user for missing info',
   ].join('\n');

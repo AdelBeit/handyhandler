@@ -267,14 +267,7 @@ async function handleV2Intake(session, input, automationHandler, messenger, sess
       fields: missing.length ? missing : outcome.fields,
       prompt: outcome.prompt || `Missing ${missing.join(', ')}.`,
     };
-    return applyRemediationOutcome(
-      input.channelId,
-      session,
-      remediationOutcome,
-      automationHandler,
-      messenger,
-      sessionStore
-    );
+    return applyRemediationOutcome(input.channelId, session, remediationOutcome, messenger);
   }
 
   session.stage = 'v2-confirm';
@@ -417,7 +410,7 @@ async function runAutomation(channelId, session, automationHandler, messenger, s
     }
 
     if (outcome.action === 'USER_ACTION_REQUIRED' || outcome.action === 'NEEDS_INFO') {
-      await applyRemediationOutcome(channelId, session, outcome, automationHandler, messenger, sessionStore);
+      await applyRemediationOutcome(channelId, session, outcome, messenger);
       return;
     }
 
@@ -431,7 +424,7 @@ async function runAutomation(channelId, session, automationHandler, messenger, s
   }
 }
 
-async function applyRemediationOutcome(channelId, session, outcome, automationHandler, messenger, sessionStore) {
+async function applyRemediationOutcome(channelId, session, outcome, messenger) {
   session.stage = 'remediation';
   session.data.missing = outcome.fields || outcome.reason;
   const field = Array.isArray(outcome.fields) ? outcome.fields[0] : outcome.fields;
