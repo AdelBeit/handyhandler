@@ -1,6 +1,4 @@
 const https = require('https');
-const { validateAutomationRequest } = require('../automation');
-
 function createTinyFishRunner(options) {
   const apiKey = options && options.apiKey;
   const baseUrl = (options && options.baseUrl) || 'https://agent.tinyfish.ai';
@@ -16,8 +14,6 @@ function createTinyFishRunner(options) {
      * @returns {Promise<import('../automation').AutomationResult>}
      */
     run(req, opts) {
-      validateAutomationRequest(req);
-
       const url = new URL(baseUrl);
       const body = JSON.stringify({
         url: req.portalUrl,
@@ -72,18 +68,25 @@ function createTinyFishRunner(options) {
 
                   events.push(event);
                   if (opts && opts.onEvent) opts.onEvent(event);
+                  if (process.env.NODE_ENV !== 'production') {
+                    console.log('TinyFish event:', JSON.stringify(event, null, 2));
+                  }
 
                   const candidate = extractConfirmation(event);
                   if (candidate) confirmation = candidate;
 
                   if (event.type === 'COMPLETE' && !resolved) {
                     resolved = true;
-                    resolve({
+                    const result = {
                       success: event.status === 'COMPLETED',
                       confirmation,
                       raw: event,
                       events,
-                    });
+                    };
+                    if (process.env.NODE_ENV !== 'production') {
+                      console.log('TinyFish complete event:', JSON.stringify(event, null, 2));
+                    }
+                    resolve(result);
                   }
                 }
               }
@@ -92,12 +95,16 @@ function createTinyFishRunner(options) {
             res.on('end', () => {
               if (!resolved) {
                 resolved = true;
-                resolve({
+                const result = {
                   success: false,
                   confirmation,
                   raw: { type: 'END_OF_STREAM' },
                   events,
-                });
+                };
+                if (process.env.NODE_ENV !== 'production') {
+                  console.log('TinyFish end of stream:', JSON.stringify(result.raw, null, 2));
+                }
+                resolve(result);
               }
             });
           }

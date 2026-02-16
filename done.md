@@ -11,3 +11,4 @@
 - [x] TICKET-013: Allow users to send images/documents for maintenance requests and delete after submission
 - [x] TICKET-015: Handle remediation when the agent needs more info/images and keep sessions open until the user responds
 - [x] TICKET-022: Confirm inferred field values and safely accept only enumerated options when user says no
+- [x] TICKET-021: Flow V2 bulk intake

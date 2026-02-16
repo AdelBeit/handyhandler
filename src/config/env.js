@@ -32,6 +32,14 @@ const env = {
   ...process.env,
 };
 
+function applyEnvDefaults() {
+  Object.entries(fileEnv).forEach(([key, value]) => {
+    if (!process.env[key] && value) {
+      process.env[key] = value;
+    }
+  });
+}
+
 function requireEnv(key) {
   const value = env[key];
   if (!value) {
@@ -43,4 +51,5 @@ function requireEnv(key) {
 module.exports = {
   env,
   requireEnv,
+  applyEnvDefaults,
 };

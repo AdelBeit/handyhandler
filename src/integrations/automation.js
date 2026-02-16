@@ -1,7 +1,7 @@
 /**
  * @typedef {Object} AutomationRequest
  * @property {string} portalUrl
- * @property {string} goal
+ * @property {string} goal - The automation instructions. Used for both submission and bulk-intake extraction.
  * @property {Object} [credentials]
  * @property {Object} [issue]
  * @property {Object} [extras]

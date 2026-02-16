@@ -92,8 +92,12 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     if (!alreadyRunning && isAttachCommand && !isDm) {
       if (!botMentioned && !channelId) return;
       const session = sessionStore.get(message.author.id);
-      session.stage = 'attachments';
       session.channelId = message.channelId;
+      if (flow.getFlowVersion() === 2) {
+        const prompt = flow.startSession(session);
+        return messenger.sendMessage(message.channelId, prompt);
+      }
+      session.stage = 'attachments';
       return messenger.sendMessage(message.channelId, FLOW_MESSAGES.attachmentSendPrompt);
     }
 
@@ -106,13 +110,13 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
     if (!alreadyRunning && matchesTrigger) {
       if (!isDm) {
         if (!botMentioned && !channelId) return;
-        startDmSession(message, sessionStore, messenger);
+        startDmSession(message, sessionStore, messenger, flow);
         return;
       }
       const session = sessionStore.get(message.author.id);
-      session.stage = 'portal';
       session.channelId = message.channelId;
-      messenger.sendMessage(message.channelId, FLOW_MESSAGES.portalPrompt);
+      const prompt = flow.startSession(session);
+      messenger.sendMessage(message.channelId, prompt);
       return;
     }
 
@@ -147,15 +151,20 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
   return { client };
 }
 
-async function startDmSession(message, sessionStore, messenger) {
+async function startDmSession(message, sessionStore, messenger, flow) {
   const userId = message.author.id;
-  const session = sessionStore.get(userId);
+    const session = sessionStore.get(userId);
   try {
     const dmChannel = await message.author.createDM();
     session.channelId = dmChannel.id;
-    session.stage = 'portal';
-    session.data = {};
-    messenger.sendMessage(dmChannel.id, FLOW_MESSAGES.dmStart);
+    if (flow.getFlowVersion() === 2) {
+      messenger.sendMessage(dmChannel.id, FLOW_MESSAGES.dmStartV2);
+      const prompt = flow.startSession(session);
+      messenger.sendMessage(dmChannel.id, prompt);
+    } else {
+      session.stage = 'portal';
+      messenger.sendMessage(dmChannel.id, FLOW_MESSAGES.dmStart);
+    }
     if (message.channelId !== dmChannel.id) {
       messenger.sendMessage(message.channelId, FLOW_MESSAGES.dmContinue);
     }
