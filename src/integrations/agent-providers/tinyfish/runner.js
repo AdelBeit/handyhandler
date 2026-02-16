@@ -72,6 +72,9 @@ function createTinyFishRunner(options) {
 
                   events.push(event);
                   if (opts && opts.onEvent) opts.onEvent(event);
+                  if (process.env.NODE_ENV !== 'production') {
+                    console.log('TinyFish event:', JSON.stringify(event, null, 2));
+                  }
 
                   const candidate = extractConfirmation(event);
                   if (candidate) confirmation = candidate;
