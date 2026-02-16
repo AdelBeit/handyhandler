@@ -45,6 +45,7 @@ function parseOutcome(result) {
     if (result.raw.resultJson && typeof result.raw.resultJson === 'object') {
       if (typeof result.raw.resultJson.message === 'string') textSources.push(result.raw.resultJson.message);
       if (typeof result.raw.resultJson.status === 'string') textSources.push(result.raw.resultJson.status);
+      if (typeof result.raw.resultJson.result === 'string') textSources.push(result.raw.resultJson.result);
     }
   }
 
