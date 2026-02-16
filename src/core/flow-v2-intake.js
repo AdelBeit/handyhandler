@@ -1,3 +1,4 @@
+// V2 intake helpers: prompt building, field normalization, and summary formatting.
 const { REQUIRED_FIELDS, REQUIRED_FIELD_KEYS, REQUIRED_FIELD_LABEL_BY_KEY } = require('./v2-constants');
 
 const BULK_INTAKE_FIELD_KEYS = REQUIRED_FIELDS.map((field) => field.key).join(', ');
@@ -13,7 +14,7 @@ function buildBulkIntakeSystemPrompt() {
     'Return a structured block with:',
     'STATUS: SUCCESS or FAILED',
     'ACTION: NEEDS_INFO or USER_ACTION_REQUIRED when required fields are missing',
-    `FIELDS: {"portalUrl":"...","username":"...","password":"...","issueDescription":"..."} (include any confident values; leave missing fields empty)`,
+    'FIELDS: {"portalUrl":"...","username":"...","password":"...","issueDescription":"..."} (include any confident values; leave missing fields empty)',
     'REASON: short reason if fields are missing',
     'SUGGESTED_PROMPT: a concise question that asks only for the missing fields (do not ask for fields already present)',
     'Always return FIELDS as a JSON object, even when incomplete.',

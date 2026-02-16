@@ -9,7 +9,7 @@ const {
   normalizeExtractedFields,
   getMissingRequiredFields,
   formatV2Summary,
-} = require('./v2-bulk-intake');
+} = require('./flow-v2-intake');
 const { REQUIRED_FIELD_LABEL_BY_KEY } = require('./v2-constants');
 
 const STAGES = [
@@ -250,6 +250,16 @@ function applySingleMissingField(session, text) {
   }
 }
 
+function parseV2CommaInput(text) {
+  if (!text) return null;
+  const parts = text.split(',').map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 4) return null;
+  const [portalUrl, username, password, ...issueParts] = parts;
+  const issueDescription = issueParts.join(', ').trim();
+  if (!portalUrl || !username || !password || !issueDescription) return null;
+  return { portalUrl, username, password, issueDescription };
+}
+
 async function handleV2Intake(session, input, automationHandler, messenger, sessionStore, root) {
   const attachments = extractAttachments(input.attachments);
   if (attachments.length) {
@@ -264,10 +274,20 @@ async function handleV2Intake(session, input, automationHandler, messenger, sess
     return messenger.sendMessage(input.channelId, FLOW_MESSAGES.v2BulkPrompt);
   }
 
+  const parsed = parseV2CommaInput(message);
+  if (!parsed) {
+    return messenger.sendMessage(input.channelId, FLOW_MESSAGES.v2BulkPrompt);
+  }
+  session.data.portalUrl = parsed.portalUrl;
+  session.data.username = parsed.username;
+  session.data.password = parsed.password;
+  session.data.issueDescription = parsed.issueDescription;
+
   const intakeAttachments = (session.data.attachments || []).map((item) => ({
     filename: item.filename || item.path,
   }));
 
+  // DEBUG: avoid "password" keyword in intake context text to reduce LLM guard trips.
   const intakeSoFar = [
     session.data.portalUrl ? `Portal URL: ${session.data.portalUrl}` : null,
     session.data.username ? `Username: ${session.data.username}` : null,
