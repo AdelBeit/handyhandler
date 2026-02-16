@@ -1,0 +1,77 @@
+const { REQUIRED_FIELDS, REQUIRED_FIELD_KEYS, REQUIRED_FIELD_LABEL_BY_KEY } = require('./v2-constants');
+
+const BULK_INTAKE_FIELD_KEYS = REQUIRED_FIELDS.map((field) => field.key).join(', ');
+const BULK_INTAKE_FIELD_LABELS = REQUIRED_FIELDS.map((field) => field.label).join(', ');
+
+function buildBulkIntakeSystemPrompt() {
+  return [
+    'You are extracting required fields from a user message for a maintenance request.',
+    `Required fields: ${BULK_INTAKE_FIELD_LABELS}.`,
+    'Return a structured block with:',
+    'STATUS: SUCCESS or FAILED',
+    'ACTION: NEEDS_INFO or USER_ACTION_REQUIRED when required fields are missing',
+    `FIELDS: { ${BULK_INTAKE_FIELD_KEYS} } (only include fields you are confident about)`,
+    'REASON: short reason if fields are missing',
+    'SUGGESTED_PROMPT: a concise question to ask the user for missing info',
+  ].join('\n');
+}
+
+function buildBulkIntakeGoal(message, attachments) {
+  const attachmentLines = (attachments || []).map((item) => {
+    const label = item.filename || item.url || 'attachment';
+    return `- ${label}`;
+  });
+  const attachmentBlock = attachmentLines.length
+    ? `ATTACHMENTS:\n${attachmentLines.join('\n')}`
+    : 'ATTACHMENTS: none';
+
+  return [
+    buildBulkIntakeSystemPrompt(),
+    'USER_MESSAGE:',
+    message || '',
+    attachmentBlock,
+  ].join('\n');
+}
+
+function normalizeExtractedFields(fields) {
+  if (!fields || typeof fields !== 'object') return {};
+  const normalized = {};
+  for (const key of REQUIRED_FIELD_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(fields, key)) continue;
+    const value = fields[key];
+    if (typeof value === 'string' && value.trim()) {
+      normalized[key] = value.trim();
+      continue;
+    }
+    if (value) {
+      normalized[key] = value;
+    }
+  }
+  return normalized;
+}
+
+function getMissingRequiredFields(fields) {
+  const missing = [];
+  for (const key of REQUIRED_FIELD_KEYS) {
+    if (!fields || fields[key] == null || fields[key] === '') {
+      missing.push(REQUIRED_FIELD_LABEL_BY_KEY[key] || key);
+    }
+  }
+  return missing;
+}
+
+function formatV2Summary(data) {
+  const lines = [];
+  if (data.portalUrl) lines.push(`Portal URL: ${data.portalUrl}`);
+  if (data.username) lines.push(`Username: ${data.username}`);
+  if (data.password) lines.push('Password: (captured)');
+  if (data.issueDescription) lines.push(`Issue: ${data.issueDescription}`);
+  return lines.length ? lines.join('\n') : 'No details were captured yet.';
+}
+
+module.exports = {
+  buildBulkIntakeGoal,
+  normalizeExtractedFields,
+  getMissingRequiredFields,
+  formatV2Summary,
+};

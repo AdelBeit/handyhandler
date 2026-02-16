@@ -1,6 +1,6 @@
 const FLOW_MESSAGES = {
   yesPrompt: 'yes?',
-  dmStart: 'Thanks—let’s continue in a DM. Send your portal URL to get started.',
+  dmStart: 'Thanks—let’s continue in a DM.',
   dmContinue: 'I sent you a DM to continue this request.',
   dmFailed: 'I could not open a DM. Please send me a direct message to continue.',
   portalPrompt: 'Send your portal URL to get started.',
@@ -38,6 +38,11 @@ const FLOW_MESSAGES = {
   requestSubmitted: 'Request submitted successfully.',
   automationFailed: 'Unable to submit the request. Please try again later.',
   confirmationImageLabel: 'Confirmation image',
+  v2BulkPrompt:
+    'In one message, send the portal URL, username, password, and issue description. You can attach optional photos/documents too.',
+  v2AttachmentOnlyPrompt: 'The only response I got was a picture. Please answer the questions.',
+  v2ConfirmPrompt: 'I got this info from you. Ready to submit it?',
+  v2ConfirmReadyPrompt: 'Reply `yes`, `submit`, or `ok` to submit, or `cancel` to abort.',
 };
 
 module.exports = { FLOW_MESSAGES };

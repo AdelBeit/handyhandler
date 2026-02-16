@@ -2,6 +2,7 @@
 const path = require('path');
 const fs = require('fs');
 const { createDiscordGateway } = require('../src/adapters/discord-gateway');
+const { REQUIRED_FIELD_LABELS } = require('../src/core/v2-constants');
 
 function loadEnv(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -35,6 +36,22 @@ const gateway = createDiscordGateway({
     run(data) {
       console.log('Received complete session data (stub):', data);
       return Promise.resolve({ success: true });
+    },
+    bulkIntake({ message, attachments, prompt }) {
+      console.log('Received bulk intake message (stub):', message);
+      if (attachments && attachments.length) {
+        console.log('Bulk intake attachments (stub):', attachments.map((item) => item.filename || item.url));
+      }
+      console.log('Bulk intake prompt (stub):', prompt);
+      return Promise.resolve({
+        success: false,
+        raw: {
+          message:
+            'STATUS: FAILED\n' +
+            'ACTION: NEEDS_INFO\n' +
+            `FIELDS: ${JSON.stringify(REQUIRED_FIELD_LABELS)}`,
+        },
+      });
     },
   },
 });

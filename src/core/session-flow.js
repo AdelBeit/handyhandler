@@ -2,8 +2,31 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { FLOW_MESSAGES } = require('./flow-messages');
+const { parseOutcome } = require('./automation-utils');
+const {
+  buildBulkIntakeGoal,
+  normalizeExtractedFields,
+  getMissingRequiredFields,
+  formatV2Summary,
+} = require('./v2-bulk-intake');
 
-const STAGES = ['portal', 'username', 'password', 'issue', 'attachments', 'confirm', 'remediation'];
+const STAGES = [
+  'portal',
+  'username',
+  'password',
+  'issue',
+  'attachments',
+  'confirm',
+  'remediation',
+  'v2-intake',
+  'v2-confirm',
+];
+
+function getFlowVersion() {
+  const raw = process.env.FLOW_VERSION || '1';
+  const parsed = Number.parseInt(raw, 10);
+  return parsed === 2 ? 2 : 1;
+}
 
 function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoot }) {
   if (!sessionStore) throw new Error('sessionStore is required.');
@@ -14,9 +37,15 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
 
   function normalizeSession(session) {
     if (!STAGES.includes(session.stage)) {
-      session.stage = STAGES[0];
+      session.stage = getFlowVersion() === 2 ? 'v2-intake' : STAGES[0];
     }
     return session;
+  }
+
+  function startSession(session) {
+    session.stage = getFlowVersion() === 2 ? 'v2-intake' : 'portal';
+    session.data = session.data || {};
+    return promptForStage(session);
   }
 
   async function handleInput(session, input) {
@@ -25,10 +54,10 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
     if (session.pendingRestart) {
       if (matches(input.text, /^(start over|yes)$/i)) {
         await cleanupSessionFiles(session);
-        session.stage = 'portal';
+        session.stage = getFlowVersion() === 2 ? 'v2-intake' : 'portal';
         session.data = {};
         session.pendingRestart = false;
-        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.startOver);
+        return messenger.sendMessage(input.channelId, promptForStage(session));
       }
       if (matches(input.text, /^(continue|keep going|no)$/i)) {
         session.pendingRestart = false;
@@ -47,6 +76,10 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
     }
 
     if (matches(input.text, /^attach$/i)) {
+      if (getFlowVersion() === 2) {
+        session.stage = 'v2-intake';
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.v2BulkPrompt);
+      }
       session.stage = 'attachments';
       return messenger.sendMessage(input.channelId, FLOW_MESSAGES.attachmentSendPrompt);
     }
@@ -57,6 +90,18 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
     }
 
     switch (session.stage) {
+      case 'v2-intake':
+        return handleV2Intake(session, input, automationHandler, messenger, sessionStore, root);
+      case 'v2-confirm':
+        if (matches(input.text, /^(yes|submit|ok)$/i)) {
+          return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore);
+        }
+        if (matches(input.text, /^(cancel|abort|stop|quit|exit)$/i)) {
+          await cleanupSessionFiles(session);
+          sessionStore.remove(session.userId);
+          return messenger.sendMessage(input.channelId, FLOW_MESSAGES.cancelled);
+        }
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.v2ConfirmReadyPrompt);
       case 'portal':
         session.data.portalUrl = input.text;
         session.stage = 'username';
@@ -110,6 +155,7 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
   return {
     handleInput,
     normalizeSession,
+    startSession,
   };
 }
 
@@ -176,6 +222,61 @@ async function handleRemediation(input, session, automationHandler, messenger, s
   session.data.extras = session.data.extras || [];
   session.data.extras.push({ at: new Date().toISOString(), content: input.text });
   return messenger.sendMessage(input.channelId, FLOW_MESSAGES.remediationNoted);
+}
+
+async function handleV2Intake(session, input, automationHandler, messenger, sessionStore, root) {
+  const attachments = extractAttachments(input.attachments);
+  if (attachments.length) {
+    await persistAttachments(session, attachments, root);
+  }
+
+  const message = (input.text || '').trim();
+  if (!message && attachments.length) {
+    return messenger.sendMessage(input.channelId, FLOW_MESSAGES.v2AttachmentOnlyPrompt);
+  }
+  if (!message) {
+    return messenger.sendMessage(input.channelId, FLOW_MESSAGES.v2BulkPrompt);
+  }
+
+  if (!automationHandler.bulkIntake) {
+    throw new Error('bulkIntake handler is required when FLOW_VERSION=2.');
+  }
+
+  const result = await automationHandler.bulkIntake({
+    message,
+    attachments,
+    prompt: buildBulkIntakeGoal(message, attachments),
+  });
+
+  const outcome = parseOutcome(result);
+  const extracted = normalizeExtractedFields(outcome.fields);
+  session.data = {
+    ...session.data,
+    ...extracted,
+  };
+
+  const missing = getMissingRequiredFields(session.data);
+  if (missing.length || outcome.action === 'USER_ACTION_REQUIRED' || outcome.action === 'NEEDS_INFO') {
+    session.stage = 'remediation';
+    const remediationOutcome = {
+      ...outcome,
+      fields: missing.length ? missing : outcome.fields,
+      prompt: outcome.prompt || `Missing ${missing.join(', ')}.`,
+    };
+    return applyRemediationOutcome(
+      input.channelId,
+      session,
+      remediationOutcome,
+      automationHandler,
+      messenger,
+      sessionStore
+    );
+  }
+
+  session.stage = 'v2-confirm';
+  const summary = formatV2Summary(session.data);
+  await messenger.sendMessage(input.channelId, summary);
+  return messenger.sendMessage(input.channelId, FLOW_MESSAGES.v2ConfirmPrompt);
 }
 
 function extractAttachments(attachments) {
@@ -269,65 +370,6 @@ async function cleanupSessionFiles(session) {
   }
 }
 
-function parseOutcome(result) {
-  if (!result) return { status: 'FAILED', action: 'UNKNOWN', reason: 'Unknown failure.' };
-
-  const textSources = [];
-  if (result.raw) {
-    if (typeof result.raw.message === 'string') textSources.push(result.raw.message);
-    if (typeof result.raw.resultJson === 'string') textSources.push(result.raw.resultJson);
-    if (result.raw.resultJson && typeof result.raw.resultJson === 'object') {
-      if (typeof result.raw.resultJson.message === 'string') textSources.push(result.raw.resultJson.message);
-      if (typeof result.raw.resultJson.status === 'string') textSources.push(result.raw.resultJson.status);
-    }
-  }
-
-  const combined = textSources.join('\n');
-  const block = parseStructuredBlock(combined);
-  if (block.status) return block;
-
-  return result.success
-    ? { status: 'SUCCESS' }
-    : { status: 'FAILED', action: 'UNKNOWN', reason: 'Submission failed.' };
-}
-
-function parseStructuredBlock(text) {
-  if (!text) return {};
-  const lines = text.split(/\r?\n/);
-  const data = {};
-  for (const line of lines) {
-    const match = line.match(/^([A-Z_]+):\s*(.+)$/);
-    if (!match) continue;
-    data[match[1]] = match[2].trim();
-  }
-  if (data.STATUS) data.status = data.STATUS;
-  if (data.ACTION) data.action = data.ACTION;
-  if (data.REASON) data.reason = data.REASON;
-  if (data.SUGGESTED_PROMPT) data.prompt = data.SUGGESTED_PROMPT;
-  if (data.FIELDS) {
-    try {
-      data.fields = JSON.parse(data.FIELDS);
-    } catch {
-      data.fields = data.FIELDS;
-    }
-  }
-  if (data.PROPOSAL) {
-    try {
-      data.proposal = JSON.parse(data.PROPOSAL);
-    } catch {
-      data.proposal = data.PROPOSAL;
-    }
-  }
-  if (data.OPTIONS) {
-    try {
-      data.options = JSON.parse(data.OPTIONS);
-    } catch {
-      data.options = data.OPTIONS;
-    }
-  }
-  return data;
-}
-
 function outcomePrompt(outcome) {
   if (outcome.prompt) return outcome.prompt;
   if (outcome.reason) return outcome.reason;
@@ -371,26 +413,7 @@ async function runAutomation(channelId, session, automationHandler, messenger, s
     }
 
     if (outcome.action === 'USER_ACTION_REQUIRED' || outcome.action === 'NEEDS_INFO') {
-      session.stage = 'remediation';
-      session.data.missing = outcome.fields || outcome.reason;
-      const field = Array.isArray(outcome.fields) ? outcome.fields[0] : outcome.fields;
-      const proposal = outcome.proposal && field ? outcome.proposal[field] : null;
-      const options = outcome.options && field ? outcome.options[field] : null;
-      session.data.remediation = {
-        state: proposal ? 'awaiting_confirmation' : options ? 'awaiting_option' : 'collecting',
-        field,
-        proposal,
-        options: Array.isArray(options) ? options : options ? [options] : null,
-      };
-      if (proposal) {
-        messenger.sendMessage(channelId, FLOW_MESSAGES.remediationProposal(field, proposal));
-        return;
-      }
-      if (options && options.length) {
-        messenger.sendMessage(channelId, FLOW_MESSAGES.remediationOptions(field, options));
-        return;
-      }
-      messenger.sendMessage(channelId, outcomePrompt(outcome));
+      await applyRemediationOutcome(channelId, session, outcome, automationHandler, messenger, sessionStore);
       return;
     }
 
@@ -401,6 +424,54 @@ async function runAutomation(channelId, session, automationHandler, messenger, s
     messenger.sendMessage(channelId, `Error: ${err.message}`);
     await cleanupSessionFiles(session);
     sessionStore.remove(session.userId);
+  }
+}
+
+async function applyRemediationOutcome(channelId, session, outcome, automationHandler, messenger, sessionStore) {
+  session.stage = 'remediation';
+  session.data.missing = outcome.fields || outcome.reason;
+  const field = Array.isArray(outcome.fields) ? outcome.fields[0] : outcome.fields;
+  const proposal = outcome.proposal && field ? outcome.proposal[field] : null;
+  const options = outcome.options && field ? outcome.options[field] : null;
+  session.data.remediation = {
+    state: proposal ? 'awaiting_confirmation' : options ? 'awaiting_option' : 'collecting',
+    field,
+    proposal,
+    options: Array.isArray(options) ? options : options ? [options] : null,
+  };
+  if (proposal) {
+    messenger.sendMessage(channelId, FLOW_MESSAGES.remediationProposal(field, proposal));
+    return;
+  }
+  if (options && options.length) {
+    messenger.sendMessage(channelId, FLOW_MESSAGES.remediationOptions(field, options));
+    return;
+  }
+  messenger.sendMessage(channelId, outcomePrompt(outcome));
+}
+
+function promptForStage(session) {
+  switch (session.stage) {
+    case 'v2-intake':
+      return FLOW_MESSAGES.v2BulkPrompt;
+    case 'v2-confirm':
+      return FLOW_MESSAGES.v2ConfirmPrompt;
+    case 'portal':
+      return FLOW_MESSAGES.portalPrompt;
+    case 'username':
+      return FLOW_MESSAGES.usernamePrompt;
+    case 'password':
+      return FLOW_MESSAGES.passwordPrompt;
+    case 'issue':
+      return FLOW_MESSAGES.issuePrompt;
+    case 'attachments':
+      return FLOW_MESSAGES.attachmentSendPrompt;
+    case 'confirm':
+      return FLOW_MESSAGES.confirmPrompt;
+    case 'remediation':
+      return FLOW_MESSAGES.remediationPrompt;
+    default:
+      return FLOW_MESSAGES.portalPrompt;
   }
 }
 
