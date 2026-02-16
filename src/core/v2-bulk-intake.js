@@ -8,7 +8,7 @@ function buildBulkIntakeSystemPrompt() {
   return [
     'You are extracting required fields from a user message for a maintenance request.',
     `Required fields: ${BULK_INTAKE_FIELD_LABELS}.`,
-    'You will also receive FIELDS_SO_FAR (previously captured values).',
+    'You will also receive INTAKE_SO_FAR (previously captured values, plain text).',
     'Only ask for fields that are missing or empty in the combined result.',
     'Return a structured block with:',
     'STATUS: SUCCESS or FAILED',
@@ -20,7 +20,7 @@ function buildBulkIntakeSystemPrompt() {
   ].join('\n');
 }
 
-function buildBulkIntakeGoal({ message, attachments, fieldsSoFar }) {
+function buildBulkIntakeGoal({ message, attachments, intakeSoFar }) {
   const attachmentLines = (attachments || []).map((item) => {
     const label = item.filename || item.url || 'attachment';
     return `- ${label}`;
@@ -31,17 +31,17 @@ function buildBulkIntakeGoal({ message, attachments, fieldsSoFar }) {
 
   return [
     buildBulkIntakeSystemPrompt(),
-    `FIELDS_SO_FAR: ${JSON.stringify(fieldsSoFar || {})}`,
+    `INTAKE_SO_FAR:\n${intakeSoFar || ''}`,
     'USER_MESSAGE:',
     message || '',
     attachmentBlock,
   ].join('\n');
 }
 
-function buildBulkIntakeRequest({ message, attachments, fieldsSoFar }) {
+function buildBulkIntakeRequest({ message, attachments, intakeSoFar }) {
   return {
     portalUrl: FALLBACK_PORTAL_URL,
-    goal: buildBulkIntakeGoal({ message, attachments, fieldsSoFar }),
+    goal: buildBulkIntakeGoal({ message, attachments, intakeSoFar }),
   };
 }
 
