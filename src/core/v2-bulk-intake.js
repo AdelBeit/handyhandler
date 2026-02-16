@@ -11,13 +11,14 @@ function buildBulkIntakeSystemPrompt() {
     'Return a structured block with:',
     'STATUS: SUCCESS or FAILED',
     'ACTION: NEEDS_INFO or USER_ACTION_REQUIRED when required fields are missing',
-    `FIELDS: {"portalUrl":"...","username":"...","password":"...","issueDescription":"..."} (only include fields you are confident about)`,
+    `FIELDS: {"portalUrl":"...","username":"...","password":"...","issueDescription":"..."} (include any confident values; leave missing fields empty)`,
     'REASON: short reason if fields are missing',
     'SUGGESTED_PROMPT: a concise question to ask the user for missing info',
+    'Always return FIELDS as a JSON object, even when incomplete.',
   ].join('\n');
 }
 
-function buildBulkIntakeGoal(message, attachments) {
+function buildBulkIntakeGoal({ message, attachments, fieldsSoFar }) {
   const attachmentLines = (attachments || []).map((item) => {
     const label = item.filename || item.url || 'attachment';
     return `- ${label}`;
@@ -28,16 +29,17 @@ function buildBulkIntakeGoal(message, attachments) {
 
   return [
     buildBulkIntakeSystemPrompt(),
+    `FIELDS_SO_FAR: ${JSON.stringify(fieldsSoFar || {})}`,
     'USER_MESSAGE:',
     message || '',
     attachmentBlock,
   ].join('\n');
 }
 
-function buildBulkIntakeRequest(message, attachments) {
+function buildBulkIntakeRequest({ message, attachments, fieldsSoFar }) {
   return {
     portalUrl: FALLBACK_PORTAL_URL,
-    goal: buildBulkIntakeGoal(message, attachments),
+    goal: buildBulkIntakeGoal({ message, attachments, fieldsSoFar }),
   };
 }
 

@@ -43,7 +43,7 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
     }
     ensureSessionData(session);
     if (!session.data.v2Intake) {
-      session.data.v2Intake = { messages: [] };
+      session.data.v2Intake = {};
     }
     return session;
   }
@@ -51,7 +51,7 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
   function startSession(session) {
     session.stage = getFlowVersion() === 2 ? 'v2-intake' : 'portal';
     session.data = createSessionData();
-    session.data.v2Intake = { messages: [] };
+    session.data.v2Intake = {};
     return promptForStage(session);
   }
 
@@ -264,14 +264,24 @@ async function handleV2Intake(session, input, automationHandler, messenger, sess
     return messenger.sendMessage(input.channelId, FLOW_MESSAGES.v2BulkPrompt);
   }
 
-  session.data.v2Intake.messages = session.data.v2Intake.messages || [];
-  session.data.v2Intake.messages.push(message);
-  const combinedMessage = session.data.v2Intake.messages.join('\n');
   const intakeAttachments = (session.data.attachments || []).map((item) => ({
     filename: item.filename || item.path,
   }));
 
-  const result = await automationHandler.run(buildBulkIntakeRequest(combinedMessage, intakeAttachments));
+  const fieldsSoFar = {
+    portalUrl: session.data.portalUrl,
+    username: session.data.username,
+    password: session.data.password,
+    issueDescription: session.data.issueDescription,
+  };
+
+  const result = await automationHandler.run(
+    buildBulkIntakeRequest({
+      message,
+      attachments: intakeAttachments,
+      fieldsSoFar,
+    })
+  );
   if (process.env.NODE_ENV !== 'production') {
     console.log('Bulk intake raw result:', JSON.stringify(result && result.raw, null, 2));
   }
