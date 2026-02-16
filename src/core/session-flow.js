@@ -293,13 +293,9 @@ async function handleV2Intake(session, input, automationHandler, messenger, sess
     ...extracted,
   };
 
-  const missing = getMissingRequiredFields(session.data);
-  const needsInfo =
-    missing.length > 0 || outcome.action === 'USER_ACTION_REQUIRED' || outcome.action === 'NEEDS_INFO';
-  if (needsInfo) {
+  if (outcome.action === 'USER_ACTION_REQUIRED' || outcome.action === 'NEEDS_INFO') {
     session.stage = 'v2-intake';
-    session.data.v2Intake.missing = missing;
-    session.data.v2Intake.prompt = outcome.prompt || `Missing ${missing.join(', ')}.`;
+    session.data.v2Intake.prompt = outcome.prompt || FLOW_MESSAGES.v2BulkPrompt;
     return messenger.sendMessage(input.channelId, session.data.v2Intake.prompt);
   }
 
