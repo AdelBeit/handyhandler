@@ -59,7 +59,11 @@ function buildStatusGoal(session, command) {
   parts.push(`Username: ${session.data.username}`);
   parts.push(`Password: ${session.data.password}`);
   if (command.type === 'detail') {
-    parts.push(`Find the request with ID: ${command.query}.`);
+    parts.push(`Search for the request matching: ${command.query}.`);
+    parts.push('Match by case/request number, description, title, or other identifying details.');
+    parts.push(
+      'If you cannot find an exact match, respond with a clear not-found message and include the top 5 most recent requests.'
+    );
   } else {
     const filter = command.filter || 'open';
     parts.push(`List the ${filter} requests (top 5 most recent if not specified).`);
