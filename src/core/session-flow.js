@@ -57,7 +57,10 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
         session.stage = getFlowVersion() === 2 ? 'v2-intake' : 'portal';
         session.data = {};
         session.pendingRestart = false;
-        return messenger.sendMessage(input.channelId, promptForStage(session));
+        if (getFlowVersion() === 2) {
+          return messenger.sendMessage(input.channelId, promptForStage(session));
+        }
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.startOver);
       }
       if (matches(input.text, /^(continue|keep going|no)$/i)) {
         session.pendingRestart = false;
@@ -156,6 +159,7 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
     handleInput,
     normalizeSession,
     startSession,
+    getFlowVersion,
   };
 }
 

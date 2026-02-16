@@ -93,8 +93,12 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
       if (!botMentioned && !channelId) return;
       const session = sessionStore.get(message.author.id);
       session.channelId = message.channelId;
-      const prompt = flow.startSession(session);
-      return messenger.sendMessage(message.channelId, prompt);
+      if (flow.getFlowVersion() === 2) {
+        const prompt = flow.startSession(session);
+        return messenger.sendMessage(message.channelId, prompt);
+      }
+      session.stage = 'attachments';
+      return messenger.sendMessage(message.channelId, FLOW_MESSAGES.attachmentSendPrompt);
     }
 
     if (alreadyRunning && matchesTrigger) {
@@ -154,9 +158,14 @@ async function startDmSession(message, sessionStore, messenger, flow) {
     const dmChannel = await message.author.createDM();
     session.channelId = dmChannel.id;
     session.data = {};
-    messenger.sendMessage(dmChannel.id, FLOW_MESSAGES.dmStart);
-    const prompt = flow.startSession(session);
-    messenger.sendMessage(dmChannel.id, prompt);
+    if (flow.getFlowVersion() === 2) {
+      messenger.sendMessage(dmChannel.id, FLOW_MESSAGES.dmStartV2);
+      const prompt = flow.startSession(session);
+      messenger.sendMessage(dmChannel.id, prompt);
+    } else {
+      session.stage = 'portal';
+      messenger.sendMessage(dmChannel.id, FLOW_MESSAGES.dmStart);
+    }
     if (message.channelId !== dmChannel.id) {
       messenger.sendMessage(message.channelId, FLOW_MESSAGES.dmContinue);
     }

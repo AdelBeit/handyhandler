@@ -1,6 +1,7 @@
 const FLOW_MESSAGES = {
   yesPrompt: 'yes?',
-  dmStart: 'Thanks—let’s continue in a DM.',
+  dmStart: 'Thanks—let’s continue in a DM. Send your portal URL to get started.',
+  dmStartV2: 'Thanks—let’s continue in a DM.',
   dmContinue: 'I sent you a DM to continue this request.',
   dmFailed: 'I could not open a DM. Please send me a direct message to continue.',
   portalPrompt: 'Send your portal URL to get started.',
