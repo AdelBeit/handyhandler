@@ -245,6 +245,9 @@ async function handleV2Intake(session, input, automationHandler, messenger, sess
   }
 
   const result = await automationHandler.run(buildBulkIntakeRequest(message, attachments));
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Bulk intake raw result:', JSON.stringify(result && result.raw, null, 2));
+  }
 
   const outcome = parseOutcome(result);
   const extracted = normalizeExtractedFields(outcome.fields);

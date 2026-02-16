@@ -78,12 +78,16 @@ function createTinyFishRunner(options) {
 
                   if (event.type === 'COMPLETE' && !resolved) {
                     resolved = true;
-                    resolve({
+                    const result = {
                       success: event.status === 'COMPLETED',
                       confirmation,
                       raw: event,
                       events,
-                    });
+                    };
+                    if (process.env.NODE_ENV !== 'production') {
+                      console.log('TinyFish complete event:', JSON.stringify(event, null, 2));
+                    }
+                    resolve(result);
                   }
                 }
               }
@@ -92,12 +96,16 @@ function createTinyFishRunner(options) {
             res.on('end', () => {
               if (!resolved) {
                 resolved = true;
-                resolve({
+                const result = {
                   success: false,
                   confirmation,
                   raw: { type: 'END_OF_STREAM' },
                   events,
-                });
+                };
+                if (process.env.NODE_ENV !== 'production') {
+                  console.log('TinyFish end of stream:', JSON.stringify(result.raw, null, 2));
+                }
+                resolve(result);
               }
             });
           }
