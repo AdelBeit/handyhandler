@@ -44,6 +44,9 @@ const FLOW_MESSAGES = {
   v2AttachmentOnlyPrompt: 'The only response I got was a picture. Please answer the questions.',
   v2ConfirmPrompt: 'I got this info from you. Ready to submit it?',
   v2ConfirmReadyPrompt: 'Reply `yes`, `submit`, or `ok` to submit, or `cancel` to abort.',
+  statusCredentialsPrompt:
+    'To check status, reply in this exact format:\nportal_url, username, password\nExample: https://example.com, alex@email.com, pass123',
+  statusLookupFailed: 'I could not look up request status right now. Please try again later.',
 };
 
 module.exports = { FLOW_MESSAGES };

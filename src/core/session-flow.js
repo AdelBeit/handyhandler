@@ -12,6 +12,7 @@ const {
 } = require('./flow-v2-intake');
 const { REQUIRED_FIELD_LABEL_BY_KEY } = require('./v2-constants');
 const { parseV2CommaInput } = require('./utils/v2-intake-validator');
+const { parseStatusCommand, parseStatusCredentials } = require('./utils/status-command');
 
 const STAGES = [
   'portal',
@@ -84,6 +85,28 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
       await cleanupSessionFiles(session);
       sessionStore.remove(session.userId);
       return messenger.sendMessage(input.channelId, FLOW_MESSAGES.cancelled);
+    }
+
+    if (session.data.statusLookupPending) {
+      const creds = parseStatusCredentials(input.text);
+      if (!creds) {
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.statusCredentialsPrompt);
+      }
+      session.data.portalUrl = creds.portalUrl;
+      session.data.username = creds.username;
+      session.data.password = creds.password;
+      session.data.statusLookupPending = false;
+      return runStatusLookup(input.channelId, session, automationHandler, messenger);
+    }
+
+    const statusCommand = parseStatusCommand(input.text);
+    if (statusCommand) {
+      session.data.statusCommand = statusCommand;
+      if (!session.data.portalUrl || !session.data.username || !session.data.password) {
+        session.data.statusLookupPending = true;
+        return messenger.sendMessage(input.channelId, FLOW_MESSAGES.statusCredentialsPrompt);
+      }
+      return runStatusLookup(input.channelId, session, automationHandler, messenger);
     }
 
     if (matches(input.text, /^attach$/i)) {
@@ -472,6 +495,51 @@ async function runAutomation(channelId, session, automationHandler, messenger, s
     await cleanupSessionFiles(session);
     sessionStore.remove(session.userId);
   }
+}
+
+async function runStatusLookup(channelId, session, automationHandler, messenger) {
+  try {
+    const command = session.data.statusCommand || { type: 'list', filter: 'open' };
+    const goal = buildStatusGoal(session, command);
+    const result = await automationHandler.run({
+      portalUrl: session.data.portalUrl,
+      goal,
+    });
+    const message = extractStatusMessage(result);
+    messenger.sendMessage(channelId, message || FLOW_MESSAGES.statusLookupFailed);
+  } catch (err) {
+    messenger.sendMessage(channelId, FLOW_MESSAGES.statusLookupFailed);
+  } finally {
+    session.data.statusCommand = null;
+  }
+}
+
+function buildStatusGoal(session, command) {
+  const parts = [];
+  parts.push('Log in to the portal and retrieve maintenance request statuses.');
+  parts.push(`Portal URL: ${session.data.portalUrl}`);
+  parts.push(`Username: ${session.data.username}`);
+  parts.push(`Password: ${session.data.password}`);
+  if (command.type === 'detail') {
+    parts.push(`Find the request with ID: ${command.query}.`);
+  } else {
+    const filter = command.filter || 'open';
+    parts.push(`List the ${filter} requests (top 5 most recent if not specified).`);
+  }
+  parts.push('Reply with a clear, user-facing summary.');
+  return parts.join(' ');
+}
+
+function extractStatusMessage(result) {
+  if (!result || !result.raw) return null;
+  const raw = result.raw;
+  const resultJson = raw.resultJson;
+  if (resultJson && typeof resultJson === 'object') {
+    if (typeof resultJson.message === 'string') return resultJson.message;
+    if (typeof resultJson.result === 'string') return resultJson.result;
+  }
+  if (typeof raw.message === 'string') return raw.message;
+  return null;
 }
 
 async function applyRemediationOutcome(channelId, session, outcome, messenger) {
