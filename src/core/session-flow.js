@@ -5,7 +5,7 @@ const { FLOW_MESSAGES } = require('./flow-messages');
 
 const STAGES = ['portal', 'username', 'password', 'issue', 'attachments', 'confirm', 'remediation'];
 
-function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoot }) {
+function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoot, requestStore }) {
   if (!sessionStore) throw new Error('sessionStore is required.');
   if (!automationHandler) throw new Error('automationHandler is required.');
   if (!messenger) throw new Error('messenger is required.');
@@ -96,11 +96,11 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
       }
       case 'confirm':
         if (matches(input.text, /^yes$/i)) {
-          return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore);
+          return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore, requestStore);
         }
         return messenger.sendMessage(input.channelId, FLOW_MESSAGES.confirmReadyPrompt);
       case 'remediation':
-        return handleRemediation(input, session, automationHandler, messenger, sessionStore, root);
+        return handleRemediation(input, session, automationHandler, messenger, sessionStore, requestStore, root);
       default:
         session.stage = 'portal';
         return messenger.sendMessage(input.channelId, FLOW_MESSAGES.portalPrompt);
@@ -118,7 +118,7 @@ function matches(text, regex) {
   return regex.test(text.trim());
 }
 
-async function handleRemediation(input, session, automationHandler, messenger, sessionStore, root) {
+async function handleRemediation(input, session, automationHandler, messenger, sessionStore, requestStore, root) {
   if (!session.data.remediation) {
     session.data.remediation = { state: 'collecting' };
   }
@@ -131,7 +131,7 @@ async function handleRemediation(input, session, automationHandler, messenger, s
     );
   }
   if (matches(input.text, /^done$/i)) {
-    return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore);
+    return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore, requestStore);
   }
   if (matches(input.text, /^(options|list)$/i) && session.data.remediation.options) {
     const field = session.data.remediation.field || 'this field';
@@ -145,7 +145,7 @@ async function handleRemediation(input, session, automationHandler, messenger, s
         session.data[field] = proposal;
       }
       session.data.remediation = null;
-      return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore);
+      return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore, requestStore);
     }
     if (matches(input.text, /^no$/i)) {
       const { field, options } = session.data.remediation;
@@ -166,7 +166,7 @@ async function handleRemediation(input, session, automationHandler, messenger, s
         session.data[field] = selected;
       }
       session.data.remediation = null;
-      return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore);
+      return runAutomation(input.channelId, session, automationHandler, messenger, sessionStore, requestStore);
     }
     return messenger.sendMessage(
       input.channelId,
@@ -352,7 +352,7 @@ function matchOption(input, options) {
   return normalizedMap.get(normalizedInput) || null;
 }
 
-async function runAutomation(channelId, session, automationHandler, messenger, sessionStore) {
+async function runAutomation(channelId, session, automationHandler, messenger, sessionStore, requestStore) {
   try {
     const result = await automationHandler.run(session.data);
     if (process.env.NODE_ENV !== 'production') {
@@ -361,6 +361,15 @@ async function runAutomation(channelId, session, automationHandler, messenger, s
     const outcome = parseOutcome(result);
 
     if (outcome.status === 'SUCCESS' || result.success) {
+      if (requestStore) {
+        requestStore.recordSuccess({
+          userId: session.userId,
+          portalUrl: session.data.portalUrl,
+          issueDescription: session.data.issueDescription,
+          confirmation: result.confirmation,
+          channelId,
+        });
+      }
       messenger.sendMessage(channelId, FLOW_MESSAGES.requestSubmitted);
       if (result.confirmation) {
         messenger.sendImage(channelId, result.confirmation, FLOW_MESSAGES.confirmationImageLabel);
