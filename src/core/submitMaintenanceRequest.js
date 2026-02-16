@@ -1,5 +1,5 @@
 const { getCredentialById } = require('../secrets/credentials');
-const { createTinyFishRunner } = require('../integrations/tinyfish/runner');
+const { createTinyFishRunner } = require('../integrations/agent-providers/tinyfish/runner');
 
 function buildGoal(input) {
   const parts = [];
