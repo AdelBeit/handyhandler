@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { FLOW_MESSAGES } = require('./flow-messages');
-const { parseOutcome } = require('./automation-utils');
+const { parseOutcome, extractConfirmationDetails } = require('./automation-utils');
 const { createSessionData, ensureSessionData } = require('./session-data');
 const {
   buildBulkIntakeRequest,
@@ -442,7 +442,15 @@ async function runAutomation(channelId, session, automationHandler, messenger, s
     const outcome = parseOutcome(result);
 
     if (outcome.status === 'SUCCESS' || result.success) {
-      messenger.sendMessage(channelId, FLOW_MESSAGES.requestSubmitted);
+      const confirmation = extractConfirmationDetails(result);
+      if (confirmation && confirmation.confirmationId) {
+        messenger.sendMessage(
+          channelId,
+          `${FLOW_MESSAGES.requestSubmitted} Confirmation: ${confirmation.confirmationId}`
+        );
+      } else {
+        messenger.sendMessage(channelId, FLOW_MESSAGES.requestSubmitted);
+      }
       if (result.confirmation) {
         messenger.sendImage(channelId, result.confirmation, FLOW_MESSAGES.confirmationImageLabel);
       }

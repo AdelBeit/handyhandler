@@ -58,7 +58,24 @@ function parseOutcome(result) {
     : { status: 'FAILED', action: 'UNKNOWN', reason: 'Submission failed.' };
 }
 
+function extractConfirmationDetails(result) {
+  const raw = result && result.raw;
+  if (!raw || typeof raw !== 'object') return null;
+  const resultJson = raw.resultJson;
+  if (!resultJson || typeof resultJson !== 'object') return null;
+
+  const confirmationId =
+    resultJson.confirmation_id ||
+    resultJson.confirmationId ||
+    (resultJson.request_details && (resultJson.request_details.case_id || resultJson.request_details.caseId));
+
+  const details = resultJson.request_details || null;
+  if (!confirmationId && !details) return null;
+  return { confirmationId, details };
+}
+
 module.exports = {
   parseStructuredBlock,
   parseOutcome,
+  extractConfirmationDetails,
 };

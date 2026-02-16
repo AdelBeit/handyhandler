@@ -20,9 +20,9 @@ function buildMaintenanceGoal(input) {
     parts.push(`Portal password: ${input.credentials.password}`);
   }
   parts.push(
-    'After submitting, capture the confirmation/case number if available, or the exact new request entry in the list.'
+    'After submitting, locate the newest request that matches the data you submitted (description/category/unit/etc.).'
   );
-  parts.push('Report the confirmation/case number (preferred) or the exact list entry details as proof of submission.');
+  parts.push('Capture and report the confirmation/case number (preferred) or the exact matching list entry details.');
   parts.push(
     'If submission fails, respond with a structured block exactly like:\n' +
       'STATUS: FAILED\n' +
