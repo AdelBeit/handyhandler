@@ -153,11 +153,10 @@ function createDiscordGateway({ botToken, channelId, automationHandler }) {
 
 async function startDmSession(message, sessionStore, messenger, flow) {
   const userId = message.author.id;
-  const session = sessionStore.get(userId);
+    const session = sessionStore.get(userId);
   try {
     const dmChannel = await message.author.createDM();
     session.channelId = dmChannel.id;
-    session.data = {};
     if (flow.getFlowVersion() === 2) {
       messenger.sendMessage(dmChannel.id, FLOW_MESSAGES.dmStartV2);
       const prompt = flow.startSession(session);

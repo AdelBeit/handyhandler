@@ -28,6 +28,26 @@ function getFlowVersion() {
   return parsed === 2 ? 2 : 1;
 }
 
+function createSessionData() {
+  return {
+    attachments: [],
+    extras: [],
+    responses: [],
+    history: [],
+  };
+}
+
+function ensureSessionData(session) {
+  if (!session.data || typeof session.data !== 'object') {
+    session.data = createSessionData();
+    return;
+  }
+  if (!Array.isArray(session.data.attachments)) session.data.attachments = [];
+  if (!Array.isArray(session.data.extras)) session.data.extras = [];
+  if (!Array.isArray(session.data.responses)) session.data.responses = [];
+  if (!Array.isArray(session.data.history)) session.data.history = [];
+}
+
 function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoot }) {
   if (!sessionStore) throw new Error('sessionStore is required.');
   if (!automationHandler) throw new Error('automationHandler is required.');
@@ -39,12 +59,13 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
     if (!STAGES.includes(session.stage)) {
       session.stage = getFlowVersion() === 2 ? 'v2-intake' : STAGES[0];
     }
+    ensureSessionData(session);
     return session;
   }
 
   function startSession(session) {
     session.stage = getFlowVersion() === 2 ? 'v2-intake' : 'portal';
-    session.data = session.data || {};
+    session.data = createSessionData();
     return promptForStage(session);
   }
 
@@ -55,7 +76,7 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
       if (matches(input.text, /^(start over|yes)$/i)) {
         await cleanupSessionFiles(session);
         session.stage = getFlowVersion() === 2 ? 'v2-intake' : 'portal';
-        session.data = {};
+        session.data = createSessionData();
         session.pendingRestart = false;
         if (getFlowVersion() === 2) {
           return messenger.sendMessage(input.channelId, promptForStage(session));
