@@ -11,6 +11,7 @@ const {
   formatV2Summary,
 } = require('./flow-v2-intake');
 const { REQUIRED_FIELD_LABEL_BY_KEY } = require('./v2-constants');
+const { parseV2CommaInput } = require('./utils/v2-intake-validator');
 
 const STAGES = [
   'portal',
@@ -248,16 +249,6 @@ function applySingleMissingField(session, text) {
   if (!session.data[key]) {
     session.data[key] = text.trim();
   }
-}
-
-function parseV2CommaInput(text) {
-  if (!text) return null;
-  const parts = text.split(',').map((part) => part.trim()).filter(Boolean);
-  if (parts.length < 4) return null;
-  const [portalUrl, username, password, ...issueParts] = parts;
-  const issueDescription = issueParts.join(', ').trim();
-  if (!portalUrl || !username || !password || !issueDescription) return null;
-  return { portalUrl, username, password, issueDescription };
 }
 
 async function handleV2Intake(session, input, automationHandler, messenger, sessionStore, root) {
