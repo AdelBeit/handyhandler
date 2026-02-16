@@ -1,6 +1,7 @@
 const { REQUIRED_FIELDS, REQUIRED_FIELD_KEYS, REQUIRED_FIELD_LABEL_BY_KEY } = require('./v2-constants');
 
 const BULK_INTAKE_FIELD_KEYS = REQUIRED_FIELDS.map((field) => field.key).join(', ');
+const FALLBACK_PORTAL_URL = 'https://example.invalid';
 const BULK_INTAKE_FIELD_LABELS = REQUIRED_FIELDS.map((field) => field.label).join(', ');
 
 function buildBulkIntakeSystemPrompt() {
@@ -31,6 +32,13 @@ function buildBulkIntakeGoal(message, attachments) {
     message || '',
     attachmentBlock,
   ].join('\n');
+}
+
+function buildBulkIntakeRequest(message, attachments) {
+  return {
+    portalUrl: FALLBACK_PORTAL_URL,
+    goal: buildBulkIntakeGoal(message, attachments),
+  };
 }
 
 function normalizeExtractedFields(fields) {
@@ -71,6 +79,7 @@ function formatV2Summary(data) {
 
 module.exports = {
   buildBulkIntakeGoal,
+  buildBulkIntakeRequest,
   normalizeExtractedFields,
   getMissingRequiredFields,
   formatV2Summary,

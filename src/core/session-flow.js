@@ -5,7 +5,7 @@ const { FLOW_MESSAGES } = require('./flow-messages');
 const { parseOutcome } = require('./automation-utils');
 const { createSessionData, ensureSessionData } = require('./session-data');
 const {
-  buildBulkIntakeGoal,
+  buildBulkIntakeRequest,
   normalizeExtractedFields,
   getMissingRequiredFields,
   formatV2Summary,
@@ -244,15 +244,7 @@ async function handleV2Intake(session, input, automationHandler, messenger, sess
     return messenger.sendMessage(input.channelId, FLOW_MESSAGES.v2BulkPrompt);
   }
 
-  if (!automationHandler.bulkIntake) {
-    throw new Error('bulkIntake handler is required when FLOW_VERSION=2.');
-  }
-
-  const result = await automationHandler.bulkIntake({
-    message,
-    attachments,
-    prompt: buildBulkIntakeGoal(message, attachments),
-  });
+  const result = await automationHandler.run(buildBulkIntakeRequest(message, attachments));
 
   const outcome = parseOutcome(result);
   const extracted = normalizeExtractedFields(outcome.fields);
