@@ -8,7 +8,7 @@
 - **TICKET-019 (Session persistence)** – Todo: persist sessions to a JSON file so they survive restarts.
 - **TICKET-020 (Request status lookup)** – Done: allow users to request maintenance status; if no specific request is named, return top 5 open requests and prompt for specific/all/cancelled/resolved filters.
 - **TICKET-021 (Flow V2 bulk intake)** – Done: `FLOW_VERSION=2` gated V2 single-bulk prompt for portal URL, username, password, issue description, optional attachments; send to TinyFish with required-fields system prompt + minimal parsing; reuse V1 remediation when missing/action needed; confirm before submit; persist attachments immediately.
-- **TICKET-025 (Portal required-fields detection)** – Todo: detect required fields from each portal’s form and prompt only for those before submission.
+- **TICKET-025 (Portal required-fields detection)** – In Progress: detect required fields from each portal’s form and prompt only for those before submission.
 - **TICKET-022 (Field confirmation & safe options)** – Done: https://github.com/AdelBeit/handyhandler/pull/12
 - **TICKET-009 (Discord credential reuse)** – Todo: encrypt reuse with Discord user ID + PIN.
 - **TICKET-007 (Discord credential capture)** – Todo: portal URL, username, password, consent flow.
