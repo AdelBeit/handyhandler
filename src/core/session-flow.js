@@ -10,6 +10,7 @@ const {
   getMissingRequiredFields,
   formatV2Summary,
 } = require('./v2-bulk-intake');
+const { REQUIRED_FIELD_LABEL_BY_KEY } = require('./v2-constants');
 
 const STAGES = [
   'portal',
@@ -226,8 +227,23 @@ async function handleRemediation(input, session, automationHandler, messenger, s
     );
   }
   session.data.extras = session.data.extras || [];
+  applySingleMissingField(session, input.text);
   session.data.extras.push({ at: new Date().toISOString(), content: input.text });
   return messenger.sendMessage(input.channelId, FLOW_MESSAGES.remediationNoted);
+}
+
+function applySingleMissingField(session, text) {
+  if (!text || !session || !session.data) return;
+  const missing = session.data.missing;
+  const missingList = Array.isArray(missing) ? missing : missing ? [missing] : [];
+  if (missingList.length !== 1) return;
+  const single = missingList[0];
+  const keyMatch = Object.entries(REQUIRED_FIELD_LABEL_BY_KEY).find(([, label]) => label === single);
+  if (!keyMatch) return;
+  const [key] = keyMatch;
+  if (!session.data[key]) {
+    session.data[key] = text.trim();
+  }
 }
 
 async function handleV2Intake(session, input, automationHandler, messenger, sessionStore, root) {
