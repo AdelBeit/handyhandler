@@ -1,5 +1,5 @@
 const https = require('https');
-const { validateAutomationRequest } = require('../automation');
+const { validateAutomationRequest } = require('../../automation');
 
 function createTinyFishRunner(options) {
   const apiKey = options && options.apiKey;
