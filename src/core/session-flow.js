@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { FLOW_MESSAGES } = require('./flow-messages');
+const { createCommandRouter } = require('./command-router');
 
 const STAGES = ['portal', 'username', 'password', 'issue', 'attachments', 'confirm', 'remediation'];
 
@@ -11,6 +12,7 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
   if (!messenger) throw new Error('messenger is required.');
 
   const root = repoRoot || path.resolve(__dirname, '..');
+  const commandRouter = requestStore ? createCommandRouter({ requestStore, messenger }) : null;
 
   function normalizeSession(session) {
     if (!STAGES.includes(session.stage)) {
@@ -44,6 +46,10 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
       await cleanupSessionFiles(session);
       sessionStore.remove(session.userId);
       return messenger.sendMessage(input.channelId, FLOW_MESSAGES.cancelled);
+    }
+
+    if (commandRouter && commandRouter.maybeHandle(input)) {
+      return;
     }
 
     if (matches(input.text, /^attach$/i)) {
