@@ -2,6 +2,7 @@
 const path = require('path');
 const fs = require('fs');
 const { createDiscordGateway } = require('../src/adapters/discord-gateway');
+const { applyEnvDefaults } = require('../src/config/env');
 const { REQUIRED_FIELD_LABELS } = require('../src/core/v2-constants');
 
 function loadEnv(filePath) {
@@ -20,6 +21,8 @@ function loadEnv(filePath) {
 
 const repoRoot = path.resolve(__dirname, '..');
 const env = loadEnv(path.join(repoRoot, '.env'));
+
+applyEnvDefaults();
 
 const botToken = process.env.DISCORD_BOT_TOKEN || env.DISCORD_BOT_TOKEN;
 const channelId = process.env.DISCORD_CHANNEL_ID || env.DISCORD_CHANNEL_ID;
