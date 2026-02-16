@@ -40,7 +40,7 @@ const FLOW_MESSAGES = {
   automationFailed: 'Unable to submit the request. Please try again later.',
   confirmationImageLabel: 'Confirmation image',
   v2BulkPrompt:
-    'In one message, send the portal URL, username, password, and issue description. You can attach optional photos/documents too.',
+    'In one message, share the portal URL, username, password, and a brief issue description. Photos or documents are welcome too.',
   v2AttachmentOnlyPrompt: 'The only response I got was a picture. Please answer the questions.',
   v2ConfirmPrompt: 'I got this info from you. Ready to submit it?',
   v2ConfirmReadyPrompt: 'Reply `yes`, `submit`, or `ok` to submit, or `cancel` to abort.',

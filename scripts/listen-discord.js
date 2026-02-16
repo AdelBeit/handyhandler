@@ -2,7 +2,9 @@
 const path = require('path');
 const fs = require('fs');
 const { createDiscordGateway } = require('../src/adapters/discord-gateway');
-const { applyEnvDefaults } = require('../src/config/env');
+const { createTinyFishRunner } = require('../src/integrations/agent-providers/tinyfish/runner');
+const { buildMaintenanceGoal } = require('../src/core/maintenance-goal');
+const { applyEnvDefaults, requireEnv } = require('../src/config/env');
 
 function loadEnv(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -31,13 +33,31 @@ if (!botToken || !channelId) {
   process.exit(1);
 }
 
+const apiKey = requireEnv('TINYFISH_API_KEY');
+const baseUrl = process.env.TINYFISH_BASE_URL || env.TINYFISH_BASE_URL;
+const runner = createTinyFishRunner({ apiKey, baseUrl });
+
 const gateway = createDiscordGateway({
   botToken,
   channelId,
   automationHandler: {
     run(data) {
-      console.log('Received complete session data (stub):', data);
-      return Promise.resolve({ success: true });
+      if (data && typeof data.goal === 'string' && data.portalUrl) {
+        return runner.run(data);
+      }
+
+      const goal = buildMaintenanceGoal({
+        issue: { description: data.issueDescription },
+        credentials: {
+          username: data.username,
+          password: data.password,
+        },
+      });
+
+      return runner.run({
+        portalUrl: data.portalUrl,
+        goal,
+      });
     },
   },
 });
