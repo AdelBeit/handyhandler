@@ -8,12 +8,14 @@ function buildBulkIntakeSystemPrompt() {
   return [
     'You are extracting required fields from a user message for a maintenance request.',
     `Required fields: ${BULK_INTAKE_FIELD_LABELS}.`,
+    'You will also receive FIELDS_SO_FAR (previously captured values).',
+    'Only ask for fields that are missing or empty in the combined result.',
     'Return a structured block with:',
     'STATUS: SUCCESS or FAILED',
     'ACTION: NEEDS_INFO or USER_ACTION_REQUIRED when required fields are missing',
     `FIELDS: {"portalUrl":"...","username":"...","password":"...","issueDescription":"..."} (include any confident values; leave missing fields empty)`,
     'REASON: short reason if fields are missing',
-    'SUGGESTED_PROMPT: a concise question to ask the user for missing info',
+    'SUGGESTED_PROMPT: a concise question that asks only for the missing fields (do not ask for fields already present)',
     'Always return FIELDS as a JSON object, even when incomplete.',
   ].join('\n');
 }
