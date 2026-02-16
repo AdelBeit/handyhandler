@@ -1,3 +1,5 @@
+const { createSessionData } = require('./session-data');
+
 function createSessionStore() {
   const sessions = new Map();
 
@@ -12,12 +14,7 @@ function createSessionStore() {
       channelId: null,
       pendingRestart: false,
       tempDir: null,
-      data: {
-        attachments: [],
-        extras: [],
-        responses: [],
-        history: [],
-      },
+      data: createSessionData(),
     };
   }
 
