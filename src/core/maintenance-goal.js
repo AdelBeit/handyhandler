@@ -22,7 +22,8 @@ function buildMaintenanceGoal(input) {
   parts.push(
     'After submitting, locate the newest request that matches the data you submitted (description/category/unit/etc.).'
   );
-  parts.push('Capture and report the confirmation/case number (preferred) or the exact matching list entry details.');
+  parts.push('Always include CONFIRMATION_ID in your response when available (case/request number).');
+  parts.push('If no confirmation ID exists, report the exact matching list entry details.');
   parts.push(
     'If submission fails, respond with a structured block exactly like:\n' +
       'STATUS: FAILED\n' +

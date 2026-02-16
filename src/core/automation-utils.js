@@ -64,14 +64,59 @@ function extractConfirmationDetails(result) {
   const resultJson = raw.resultJson;
   if (!resultJson || typeof resultJson !== 'object') return null;
 
+  const textSources = [];
+  if (typeof raw.message === 'string') textSources.push(raw.message);
+  if (typeof resultJson.message === 'string') textSources.push(resultJson.message);
+  if (typeof resultJson.result === 'string') textSources.push(resultJson.result);
+
+  const block = parseStructuredBlock(textSources.join('\n'));
+  const fromBlock =
+    block.CONFIRMATION_ID ||
+    block.CASE_ID ||
+    block.REQUEST_ID ||
+    block.confirmationId ||
+    block.caseId ||
+    block.requestId ||
+    block.confirmation_id ||
+    block.case_id ||
+    block.request_id;
+
+  if (fromBlock) {
+    return { confirmationId: fromBlock, details: resultJson.request_details || null };
+  }
+
   const confirmationId =
     resultJson.confirmation_id ||
     resultJson.confirmationId ||
     (resultJson.request_details && (resultJson.request_details.case_id || resultJson.request_details.caseId));
 
   const details = resultJson.request_details || null;
+  if (!confirmationId) {
+    const fallback = findIdInObject(resultJson);
+    if (fallback) {
+      return { confirmationId: fallback, details };
+    }
+  }
   if (!confirmationId && !details) return null;
   return { confirmationId, details };
+}
+
+function findIdInObject(obj, seen = new Set()) {
+  if (!obj || typeof obj !== 'object') return null;
+  if (seen.has(obj)) return null;
+  seen.add(obj);
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'string') {
+      const lower = key.toLowerCase();
+      if (lower.includes('confirmation') || lower.includes('case') || lower.includes('request')) {
+        return value;
+      }
+    } else if (value && typeof value === 'object') {
+      const nested = findIdInObject(value, seen);
+      if (nested) return nested;
+    }
+  }
+  return null;
 }
 
 module.exports = {
