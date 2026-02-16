@@ -1,6 +1,4 @@
 const https = require('https');
-const { validateAutomationRequest } = require('../../automation');
-
 function createTinyFishRunner(options) {
   const apiKey = options && options.apiKey;
   const baseUrl = (options && options.baseUrl) || 'https://agent.tinyfish.ai';
@@ -16,8 +14,6 @@ function createTinyFishRunner(options) {
      * @returns {Promise<import('../automation').AutomationResult>}
      */
     run(req, opts) {
-      validateAutomationRequest(req);
-
       const url = new URL(baseUrl);
       const body = JSON.stringify({
         url: req.portalUrl,
