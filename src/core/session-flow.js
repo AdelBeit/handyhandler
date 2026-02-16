@@ -42,12 +42,16 @@ function createSessionFlow({ sessionStore, automationHandler, messenger, repoRoo
       session.stage = getFlowVersion() === 2 ? 'v2-intake' : STAGES[0];
     }
     ensureSessionData(session);
+    if (!session.data.v2Intake) {
+      session.data.v2Intake = { messages: [] };
+    }
     return session;
   }
 
   function startSession(session) {
     session.stage = getFlowVersion() === 2 ? 'v2-intake' : 'portal';
     session.data = createSessionData();
+    session.data.v2Intake = { messages: [] };
     return promptForStage(session);
   }
 
@@ -260,7 +264,14 @@ async function handleV2Intake(session, input, automationHandler, messenger, sess
     return messenger.sendMessage(input.channelId, FLOW_MESSAGES.v2BulkPrompt);
   }
 
-  const result = await automationHandler.run(buildBulkIntakeRequest(message, attachments));
+  session.data.v2Intake.messages = session.data.v2Intake.messages || [];
+  session.data.v2Intake.messages.push(message);
+  const combinedMessage = session.data.v2Intake.messages.join('\n');
+  const intakeAttachments = (session.data.attachments || []).map((item) => ({
+    filename: item.filename || item.path,
+  }));
+
+  const result = await automationHandler.run(buildBulkIntakeRequest(combinedMessage, intakeAttachments));
   if (process.env.NODE_ENV !== 'production') {
     console.log('Bulk intake raw result:', JSON.stringify(result && result.raw, null, 2));
   }
@@ -273,14 +284,13 @@ async function handleV2Intake(session, input, automationHandler, messenger, sess
   };
 
   const missing = getMissingRequiredFields(session.data);
-  if (missing.length || outcome.action === 'USER_ACTION_REQUIRED' || outcome.action === 'NEEDS_INFO') {
-    session.stage = 'remediation';
-    const remediationOutcome = {
-      ...outcome,
-      fields: missing.length ? missing : outcome.fields,
-      prompt: outcome.prompt || `Missing ${missing.join(', ')}.`,
-    };
-    return applyRemediationOutcome(input.channelId, session, remediationOutcome, messenger);
+  const needsInfo =
+    missing.length > 0 || outcome.action === 'USER_ACTION_REQUIRED' || outcome.action === 'NEEDS_INFO';
+  if (needsInfo) {
+    session.stage = 'v2-intake';
+    session.data.v2Intake.missing = missing;
+    session.data.v2Intake.prompt = outcome.prompt || `Missing ${missing.join(', ')}.`;
+    return messenger.sendMessage(input.channelId, session.data.v2Intake.prompt);
   }
 
   session.stage = 'v2-confirm';
