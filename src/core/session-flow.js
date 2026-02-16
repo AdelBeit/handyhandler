@@ -268,18 +268,20 @@ async function handleV2Intake(session, input, automationHandler, messenger, sess
     filename: item.filename || item.path,
   }));
 
-  const fieldsSoFar = {
-    portalUrl: session.data.portalUrl,
-    username: session.data.username,
-    password: session.data.password,
-    issueDescription: session.data.issueDescription,
-  };
+  const intakeSoFar = [
+    session.data.portalUrl ? `Portal URL: ${session.data.portalUrl}` : null,
+    session.data.username ? `Username: ${session.data.username}` : null,
+    session.data.password ? `Password: ${session.data.password}` : null,
+    session.data.issueDescription ? `Issue: ${session.data.issueDescription}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   const result = await automationHandler.run(
     buildBulkIntakeRequest({
       message,
       attachments: intakeAttachments,
-      fieldsSoFar,
+      intakeSoFar,
     })
   );
   if (process.env.NODE_ENV !== 'production') {
