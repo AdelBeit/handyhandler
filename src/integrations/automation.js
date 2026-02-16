@@ -27,12 +27,6 @@ function validateAutomationRequest(req) {
   }
 }
 
-function isBulkIntakeGoal(goal) {
-  if (!goal || typeof goal !== 'string') return false;
-  return goal.includes('USER_MESSAGE:');
-}
-
 module.exports = {
   validateAutomationRequest,
-  isBulkIntakeGoal,
 };
