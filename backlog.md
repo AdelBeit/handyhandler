@@ -10,7 +10,7 @@
 - **TICKET-018 (Log cleanup schedule)** – Todo: scheduled cleanup of logs (e.g., every 7 days).
 - **TICKET-019 (Session persistence)** – Todo: persist sessions to a JSON file so they survive restarts.
 - **TICKET-020 (Request status lookup)** – Todo: allow users to request maintenance status; if no specific request is named, return top 5 open requests and prompt for specific/all/cancelled/resolved filters.
-- **TICKET-021 (Flow V2 bulk intake)** – In Progress: `FLOW_VERSION=2` gated V2 single-bulk prompt for portal URL, username, password, issue description, optional attachments; send to TinyFish with required-fields system prompt + minimal parsing; reuse V1 remediation when missing/action needed; confirm before submit; persist attachments immediately.
+- **TICKET-021 (Flow V2 bulk intake)** – In Review: `FLOW_VERSION=2` gated V2 single-bulk prompt for portal URL, username, password, issue description, optional attachments; send to TinyFish with required-fields system prompt + minimal parsing; reuse V1 remediation when missing/action needed; confirm before submit; persist attachments immediately.
 - **TICKET-023 (V1 conversation polish)** – Todo: smoother prompts, review summary, `submit`/`edit`, and attachment `no` alias.
 - **TICKET-022 (Field confirmation & safe options)** – Done: https://github.com/AdelBeit/handyhandler/pull/12
 - **TICKET-009 (Discord credential reuse)** – Todo: encrypt reuse with Discord user ID + PIN.
