@@ -257,7 +257,7 @@ async function handleV2Intake(session, input, automationHandler, messenger, sess
   };
 
   const missing = getMissingRequiredFields(session.data);
-  if (missing.length || outcome.action === 'USER_ACTION_REQUIRED' || outcome.action === 'NEEDS_INFO') {
+  if (missing.length) {
     session.stage = 'remediation';
     const remediationOutcome = {
       ...outcome,
